@@ -273,7 +273,6 @@ float blueznach = 1;
 float greenadres = 1;
 float blueadres = 1;
 
-//проверка
 
 
 const char* Registres[] = { "EAX", "AX", "AH", "AL","EBX", "BX", "BH", "BL" ,"ECX", "CX", "CH", "CL" ,"EDX", "DX", "DH", "DL" };
