@@ -50,7 +50,22 @@ long __stdcall WindowProcess(
 	case WM_LBUTTONDOWN: {
 		gui::position = MAKEPOINTS(longParameter); // set click points
 	}return 0;
+	/**	case WM_ERASEBKGND:
+	{
+		HDC hdc = (HDC)wideParameter;
 
+		// Задайте цвет фона
+		HBRUSH hBrush = CreateSolidBrush(RGB(255, 0, 0)); // Красный цвет фона
+
+		RECT rect;
+		GetClientRect(window, &rect);
+		FillRect(hdc, &rect, hBrush);
+
+		DeleteObject(hBrush);
+
+		return 1;
+	}
+	break;	**/
 	case WM_MOUSEMOVE: {
 		if (wideParameter == MK_LBUTTON)
 		{
@@ -270,10 +285,19 @@ string adres = "0005A420";
 string resultString = "";
 float greenznach = 1;
 float blueznach = 1;
+float redznach = 1;
 float greenadres = 1;
 float blueadres = 1;
-
-
+float redadres = 1;
+float green = 1;
+float blue = 1;
+float red = 1;
+float green1 = 0;
+float blue1 = 0;
+float red1 = 0;
+float redbutton = 0.11;
+float greenbutton = 0.56;
+float bluebutton = 1;
 
 const char* Registres[] = { "EAX", "AX", "AH", "AL","EBX", "BX", "BH", "BL" ,"ECX", "CX", "CH", "CL" ,"EDX", "DX", "DH", "DL" };
 static int NumberRegistr = 0;
@@ -304,12 +328,17 @@ void BlinkingText(const char* text)
 			return;
 		}
 	}
-	ImGui::Text(text);
+	ImGui::TextColored(ImVec4(red1, green1, blue1, 1),text);
 }
 void gui::Render() noexcept
 {
 	ImGui::SetNextWindowPos({ 0, 0 });
 	ImGui::SetNextWindowSize({ WIDTH, HEIGHT });
+	ImGui::PushStyleColor(ImGuiCol_WindowBg, ImVec4(red, green, blue, 1.0f)); // Устанавливаем цвет фона окна на тёмно-серый
+	ImGui::PushStyleColor(ImGuiCol_Text, ImVec4(red1, green1, blue1, 1.0f));
+	ImGui::PushStyleColor(ImGuiCol_Button, ImVec4(redbutton, greenbutton, bluebutton, 1.0f));
+	ImGui::PushStyleColor(ImGuiCol_PopupBg, ImVec4(red, green, blue, 1.0f)); // Установите цвет для выпадающего окна
+
 	ImGui::Begin(
 		(const char*)u8"Курсовая",
 		&isRunning,
@@ -319,18 +348,47 @@ void gui::Render() noexcept
 		ImGuiWindowFlags_NoMove |
 		ImGuiWindowFlags_MenuBar
 	);
-	ImGui::Text((const char*)u8"Регистр");
+	//ImGui::PopStyleColor(); // Возвращаем стандартный цвет фона окна
+	ImGui::TextColored(ImVec4(red1, green1, blue1, 1),(const char*)u8"Регистр");
 	ImGui::SameLine();
 	ImGui::SetNextItemWidth(ImGui::GetWindowWidth() * 0.08f);
 	ImGui::Combo((const char*)u8"", &NumberRegistr, Registres, IM_ARRAYSIZE(Registres));
 	registr = Registres[NumberRegistr];
+	ImGui::SameLine(670, 0);
+	if (ImGui::Button((const char*)u8"Сменить тему")) {
+		if (green == 1) {
+			green = 0;
+			blue = 0;
+			red = 0;
+			green1 = 1;
+			blue1 = 1;
+			red1 = 1;
+			redbutton = 0.1;
+			greenbutton = 0.23;
+			bluebutton = 0.39;
+		}
+		else {
+			green1 = 0;
+			blue1 = 0;
+			red1 = 0;
+			green = 1;
+			blue = 1;
+			red = 1;
+			redbutton = 0.11;
+			greenbutton = 0.56;
+			bluebutton = 1;
+		}
+	}
+	ImGui::PushStyleColor(ImGuiCol_Border, ImVec4(red1, green1, blue1, 1.0f));
 	ImGui::BeginChild("Левая панель", ImVec2(404, 300), true);
-	ImGui::Text("31           ");
+	ImGui::TextColored(ImVec4(red1, green1, blue1, 1),"31           ");
 	ImGui::SameLine();
-	ImGui::Text((const char*)registr.c_str());
+	ImGui::TextColored(ImVec4(red1, green1, blue1, 1),(const char*)registr.c_str());
 	ImGui::SameLine();
-	ImGui::Text("             0");
+	ImGui::TextColored(ImVec4(red1, green1, blue1, 1),"             0");
 	ImGui::SameLine();
+	ImGui::PushStyleColor(ImGuiCol_Button, ImVec4(1.00, 1.00, 0, 1));
+	ImGui::PushStyleColor(ImGuiCol_Text, ImVec4(0, 0, 0, 1.0f));
 	if (ImGui::Button((const char*)u8"Очистить регистр"))
 	{
 		byte1 = "00";
@@ -338,6 +396,7 @@ void gui::Render() noexcept
 		byte3 = "00";
 		byte4 = "00";
 	}
+	ImGui::PopStyleColor(2);
 	if (NumberRegistr % 4 == 0)
 	{
 		if (chet >= 9 and chet <= 13.5 and NumberCommand == 0)
@@ -361,15 +420,15 @@ void gui::Render() noexcept
 		else if (chet >= 4.5 and chet <= 9 and NumberCommand == 1)
 		{
 			ImGui::BeginChild("byte1", ImVec2(40, 40), true);
-			ImGui::Text((const char*)byte1.c_str());
+			ImGui::TextColored(ImVec4(red1, green1, blue1, 1),(const char*)byte1.c_str());
 			ImGui::EndChild();
 			ImGui::SameLine(0, 0);
 			ImGui::BeginChild("byte2", ImVec2(40, 40), true);
-			ImGui::Text((const char*)byte2.c_str());
+			ImGui::TextColored(ImVec4(red1, green1, blue1, 1),(const char*)byte2.c_str());
 			ImGui::EndChild();
 			ImGui::SameLine(0, 0);
 			ImGui::BeginChild("byte3", ImVec2(40, 40), true);
-			ImGui::Text((const char*)byte3.c_str());
+			ImGui::TextColored(ImVec4(red1, green1, blue1, 1),(const char*)byte3.c_str());
 			ImGui::EndChild();
 			ImGui::SameLine(0, 0);
 			ImGui::BeginChild("byte4", ImVec2(40, 40), true);
@@ -380,11 +439,11 @@ void gui::Render() noexcept
 		{
 			byte4 = znachbyte1;
 			ImGui::BeginChild("byte1", ImVec2(40, 40), true);
-			ImGui::Text((const char*)byte1.c_str());
+			ImGui::TextColored(ImVec4(red1, green1, blue1, 1),(const char*)byte1.c_str());
 			ImGui::EndChild();
 			ImGui::SameLine(0, 0);
 			ImGui::BeginChild("byte2", ImVec2(40, 40), true);
-			ImGui::Text((const char*)byte2.c_str());
+			ImGui::TextColored(ImVec4(red1, green1, blue1, 1),(const char*)byte2.c_str());
 			ImGui::EndChild();
 			ImGui::SameLine(0, 0);
 			ImGui::BeginChild("byte3", ImVec2(40, 40), true);
@@ -392,14 +451,14 @@ void gui::Render() noexcept
 			ImGui::EndChild();
 			ImGui::SameLine(0, 0);
 			ImGui::BeginChild("byte4", ImVec2(40, 40), true);
-			ImGui::Text((const char*)byte4.c_str());
+			ImGui::TextColored(ImVec4(red1, green1, blue1, 1),(const char*)byte4.c_str());
 			ImGui::EndChild();
 		}
 		else if (chet >= 13.5 and chet <= 18 and NumberCommand == 1)
 		{
 			byte3 = znachbyte2;
 			ImGui::BeginChild("byte1", ImVec2(40, 40), true);
-			ImGui::Text((const char*)byte1.c_str());
+			ImGui::TextColored(ImVec4(red1, green1, blue1, 1),(const char*)byte1.c_str());
 			ImGui::EndChild();
 			ImGui::SameLine(0, 0);
 			ImGui::BeginChild("byte2", ImVec2(40, 40), true);
@@ -407,11 +466,11 @@ void gui::Render() noexcept
 			ImGui::EndChild();
 			ImGui::SameLine(0, 0);
 			ImGui::BeginChild("byte3", ImVec2(40, 40), true);
-			ImGui::Text((const char*)byte3.c_str());
+			ImGui::TextColored(ImVec4(red1, green1, blue1, 1),(const char*)byte3.c_str());
 			ImGui::EndChild();
 			ImGui::SameLine(0, 0);
 			ImGui::BeginChild("byte4", ImVec2(40, 40), true);
-			ImGui::Text((const char*)byte4.c_str());
+			ImGui::TextColored(ImVec4(red1, green1, blue1, 1),(const char*)byte4.c_str());
 			ImGui::EndChild();
 		}
 		else if (chet >= 18 and chet <= 22.5 and NumberCommand == 1)
@@ -422,15 +481,15 @@ void gui::Render() noexcept
 			ImGui::EndChild();
 			ImGui::SameLine(0, 0);
 			ImGui::BeginChild("byte2", ImVec2(40, 40), true);
-			ImGui::Text((const char*)byte2.c_str());
+			ImGui::TextColored(ImVec4(red1, green1, blue1, 1),(const char*)byte2.c_str());
 			ImGui::EndChild();
 			ImGui::SameLine(0, 0);
 			ImGui::BeginChild("byte3", ImVec2(40, 40), true);
-			ImGui::Text((const char*)byte3.c_str());
+			ImGui::TextColored(ImVec4(red1, green1, blue1, 1),(const char*)byte3.c_str());
 			ImGui::EndChild();
 			ImGui::SameLine(0, 0);
 			ImGui::BeginChild("byte4", ImVec2(40, 40), true);
-			ImGui::Text((const char*)byte4.c_str());
+			ImGui::TextColored(ImVec4(red1, green1, blue1, 1),(const char*)byte4.c_str());
 			ImGui::EndChild();
 		}
 		else if (chet >= 22.5 and NumberCommand == 1) {
@@ -439,19 +498,19 @@ void gui::Render() noexcept
 			isBlinking = !isBlinking;
 			byte1 = znachbyte4;
 			ImGui::BeginChild("byte1", ImVec2(40, 40), true);
-			ImGui::Text((const char*)byte1.c_str());
+			ImGui::TextColored(ImVec4(red1, green1, blue1, 1),(const char*)byte1.c_str());
 			ImGui::EndChild();
 			ImGui::SameLine(0, 0);
 			ImGui::BeginChild("byte2", ImVec2(40, 40), true);
-			ImGui::Text((const char*)byte2.c_str());
+			ImGui::TextColored(ImVec4(red1, green1, blue1, 1),(const char*)byte2.c_str());
 			ImGui::EndChild();
 			ImGui::SameLine(0, 0);
 			ImGui::BeginChild("byte3", ImVec2(40, 40), true);
-			ImGui::Text((const char*)byte3.c_str());
+			ImGui::TextColored(ImVec4(red1, green1, blue1, 1),(const char*)byte3.c_str());
 			ImGui::EndChild();
 			ImGui::SameLine(0, 0);
 			ImGui::BeginChild("byte4", ImVec2(40, 40), true);
-			ImGui::Text((const char*)byte4.c_str());
+			ImGui::TextColored(ImVec4(red1, green1, blue1, 1),(const char*)byte4.c_str());
 			ImGui::EndChild();
 		}
 		else if (chet >= 13.5 and NumberCommand == 0) {
@@ -463,29 +522,29 @@ void gui::Render() noexcept
 			byte3 = adresbyte3;
 			byte4 = adresbyte4;
 			ImGui::BeginChild("byte1", ImVec2(40, 40), true);
-			ImGui::Text((const char*)byte1.c_str());
+			ImGui::TextColored(ImVec4(red1, green1, blue1, 1),(const char*)byte1.c_str());
 			ImGui::EndChild();
 			ImGui::SameLine(0, 0);
 			ImGui::BeginChild("byte2", ImVec2(40, 40), true);
-			ImGui::Text((const char*)byte2.c_str());
+			ImGui::TextColored(ImVec4(red1, green1, blue1, 1),(const char*)byte2.c_str());
 			ImGui::EndChild();
 			ImGui::SameLine(0, 0);
 			ImGui::BeginChild("byte3", ImVec2(40, 40), true);
-			ImGui::Text((const char*)byte3.c_str());
+			ImGui::TextColored(ImVec4(red1, green1, blue1, 1),(const char*)byte3.c_str());
 			ImGui::EndChild();
 			ImGui::SameLine(0, 0);
 			ImGui::BeginChild("byte4", ImVec2(40, 40), true);
-			ImGui::Text((const char*)byte4.c_str());
+			ImGui::TextColored(ImVec4(red1, green1, blue1, 1),(const char*)byte4.c_str());
 			ImGui::EndChild();
 		}
 		else if (error == 3 and NumberTypePeremennoi == 1)
 		{
 			ImGui::BeginChild("byte1", ImVec2(40, 40), true);
-			ImGui::Text((const char*)byte1.c_str());
+			ImGui::TextColored(ImVec4(red1, green1, blue1, 1),(const char*)byte1.c_str());
 			ImGui::EndChild();
 			ImGui::SameLine(0, 0);
 			ImGui::BeginChild("byte2", ImVec2(40, 40), true);
-			ImGui::Text((const char*)byte2.c_str());
+			ImGui::TextColored(ImVec4(red1, green1, blue1, 1),(const char*)byte2.c_str());
 			ImGui::EndChild();
 			ImGui::SameLine(0, 0);
 			ImGui::BeginChild("byte3", ImVec2(40, 40), true);
@@ -499,11 +558,11 @@ void gui::Render() noexcept
 		else if (error == 3 and NumberTypePeremennoi == 2)
 		{
 			ImGui::BeginChild("byte1", ImVec2(40, 40), true);
-			ImGui::Text((const char*)byte1.c_str());
+			ImGui::TextColored(ImVec4(red1, green1, blue1, 1),(const char*)byte1.c_str());
 			ImGui::EndChild();
 			ImGui::SameLine(0, 0);
 			ImGui::BeginChild("byte2", ImVec2(40, 40), true);
-			ImGui::Text((const char*)byte2.c_str());
+			ImGui::TextColored(ImVec4(red1, green1, blue1, 1),(const char*)byte2.c_str());
 			ImGui::EndChild();
 			ImGui::SameLine(0, 0);
 			ImGui::BeginChild("byte3", ImVec2(40, 40), true);
@@ -517,19 +576,19 @@ void gui::Render() noexcept
 		else
 		{
 			ImGui::BeginChild("byte1", ImVec2(40, 40), true);
-			ImGui::Text((const char*)byte1.c_str());
+			ImGui::TextColored(ImVec4(red1, green1, blue1, 1),(const char*)byte1.c_str());
 			ImGui::EndChild();
 			ImGui::SameLine(0, 0);
 			ImGui::BeginChild("byte2", ImVec2(40, 40), true);
-			ImGui::Text((const char*)byte2.c_str());
+			ImGui::TextColored(ImVec4(red1, green1, blue1, 1),(const char*)byte2.c_str());
 			ImGui::EndChild();
 			ImGui::SameLine(0, 0);
 			ImGui::BeginChild("byte3", ImVec2(40, 40), true);
-			ImGui::Text((const char*)byte3.c_str());
+			ImGui::TextColored(ImVec4(red1, green1, blue1, 1),(const char*)byte3.c_str());
 			ImGui::EndChild();
 			ImGui::SameLine(0, 0);
 			ImGui::BeginChild("byte4", ImVec2(40, 40), true);
-			ImGui::Text((const char*)byte4.c_str());
+			ImGui::TextColored(ImVec4(red1, green1, blue1, 1),(const char*)byte4.c_str());
 			ImGui::EndChild();
 		}
 
@@ -565,7 +624,7 @@ void gui::Render() noexcept
 			ImGui::EndChild();
 			ImGui::SameLine(0, 0);
 			ImGui::BeginChild("byte3", ImVec2(40, 40), true);
-			ImGui::Text((const char*)byte3.c_str());
+			ImGui::TextColored(ImVec4(red1, green1, blue1, 1),(const char*)byte3.c_str());
 			ImGui::EndChild();
 			ImGui::SameLine(0, 0);
 			ImGui::BeginChild("byte4", ImVec2(40, 40), true);
@@ -588,7 +647,7 @@ void gui::Render() noexcept
 			ImGui::EndChild();
 			ImGui::SameLine(0, 0);
 			ImGui::BeginChild("byte4", ImVec2(40, 40), true);
-			ImGui::Text((const char*)byte4.c_str());
+			ImGui::TextColored(ImVec4(red1, green1, blue1, 1),(const char*)byte4.c_str());
 			ImGui::EndChild();
 		}
 		else if (chet >= 13.5 and NumberCommand == 1) {
@@ -605,11 +664,11 @@ void gui::Render() noexcept
 			ImGui::EndChild();
 			ImGui::SameLine(0, 0);
 			ImGui::BeginChild("byte3", ImVec2(40, 40), true);
-			ImGui::Text((const char*)byte3.c_str());
+			ImGui::TextColored(ImVec4(red1, green1, blue1, 1),(const char*)byte3.c_str());
 			ImGui::EndChild();
 			ImGui::SameLine(0, 0);
 			ImGui::BeginChild("byte4", ImVec2(40, 40), true);
-			ImGui::Text((const char*)byte4.c_str());
+			ImGui::TextColored(ImVec4(red1, green1, blue1, 1),(const char*)byte4.c_str());
 			ImGui::EndChild();
 		}
 		else if (chet >= 13.5 and NumberCommand == 0) {
@@ -627,11 +686,11 @@ void gui::Render() noexcept
 			ImGui::EndChild();
 			ImGui::SameLine(0, 0);
 			ImGui::BeginChild("byte3", ImVec2(40, 40), true);
-			ImGui::Text((const char*)byte3.c_str());
+			ImGui::TextColored(ImVec4(red1, green1, blue1, 1),(const char*)byte3.c_str());
 			ImGui::EndChild();
 			ImGui::SameLine(0, 0);
 			ImGui::BeginChild("byte4", ImVec2(40, 40), true);
-			ImGui::Text((const char*)byte4.c_str());
+			ImGui::TextColored(ImVec4(red1, green1, blue1, 1),(const char*)byte4.c_str());
 			ImGui::EndChild();
 		}
 		else if (error == 4 and NumberTypePeremennoi == 0)
@@ -681,11 +740,11 @@ void gui::Render() noexcept
 			ImGui::EndChild();
 			ImGui::SameLine(0, 0);
 			ImGui::BeginChild("byte3", ImVec2(40, 40), true);
-			ImGui::Text((const char*)byte3.c_str());
+			ImGui::TextColored(ImVec4(red1, green1, blue1, 1),(const char*)byte3.c_str());
 			ImGui::EndChild();
 			ImGui::SameLine(0, 0);
 			ImGui::BeginChild("byte4", ImVec2(40, 40), true);
-			ImGui::Text((const char*)byte4.c_str());
+			ImGui::TextColored(ImVec4(red1, green1, blue1, 1),(const char*)byte4.c_str());
 			ImGui::EndChild();
 		}
 	}
@@ -742,7 +801,7 @@ void gui::Render() noexcept
 				ImGui::EndChild();
 				ImGui::SameLine(0, 0);
 				ImGui::BeginChild("byte3", ImVec2(40, 40), true);
-				ImGui::Text((const char*)byte3.c_str());
+				ImGui::TextColored(ImVec4(red1, green1, blue1, 1),(const char*)byte3.c_str());
 				ImGui::EndChild();
 				ImGui::SameLine(0, 0);
 				ImGui::BeginChild("byte4", ImVec2(40, 40), true);
@@ -796,7 +855,7 @@ void gui::Render() noexcept
 				ImGui::EndChild();
 				ImGui::SameLine(0, 0);
 				ImGui::BeginChild("byte3", ImVec2(40, 40), true);
-				ImGui::Text((const char*)byte3.c_str());
+				ImGui::TextColored(ImVec4(red1, green1, blue1, 1),(const char*)byte3.c_str());
 				ImGui::EndChild();
 				ImGui::SameLine(0, 0);
 				ImGui::BeginChild("byte4", ImVec2(40, 40), true);
@@ -861,7 +920,7 @@ void gui::Render() noexcept
 				ImGui::EndChild();
 				ImGui::SameLine(0, 0);
 				ImGui::BeginChild("byte4", ImVec2(40, 40), true);
-				ImGui::TextColored(ImVec4(1, 1, 1, 1), (const char*)byte4.c_str());
+				ImGui::TextColored(ImVec4(red1, green1, blue1, 1), (const char*)byte4.c_str());
 				ImGui::EndChild();
 			}
 			else if (error == 4 and NumberTypePeremennoi == 0)
@@ -915,13 +974,15 @@ void gui::Render() noexcept
 				ImGui::EndChild();
 				ImGui::SameLine(0, 0);
 				ImGui::BeginChild("byte4", ImVec2(40, 40), true);
-				ImGui::TextColored(ImVec4(1, 1, 1, 1), (const char*)byte4.c_str());
+				ImGui::TextColored(ImVec4(red1, green1, blue1, 1), (const char*)byte4.c_str());
 				ImGui::EndChild();
 			}
 		}
 	ImGui::SetNextItemWidth(ImGui::GetWindowWidth() * 0.15f);
 	ImGui::Combo((const char*)u8"Выбрать команду", &NumberCommand, Commads, IM_ARRAYSIZE(Commads));
 	ImGui::SameLine();
+	ImGui::PushStyleColor(ImGuiCol_Button, ImVec4(0, 0.5, 0, 1));
+	ImGui::PushStyleColor(ImGuiCol_Text, ImVec4(1, 1, 1, 1.0f));
 	if (ImGui::Button((const char*)u8"Активировать команду"))
 	{
 		error = 0;
@@ -942,6 +1003,7 @@ void gui::Render() noexcept
 			else error = 4;
 		}
 	}
+	ImGui::PopStyleColor(2);
 	if (NumberCommand == 0) 
 	{
 		if (chet >= 0 and chet <= 4.5)
@@ -959,16 +1021,16 @@ void gui::Render() noexcept
 		}
 		else
 		{
-			ImGui::Text("LEA");
+			ImGui::TextColored(ImVec4(red1, green1, blue1, 1), "LEA");
 			ImGui::SameLine();
-			ImGui::Text((const char*)registr.c_str());
+			ImGui::TextColored(ImVec4(red1, green1, blue1, 1),(const char*)registr.c_str());
 			ImGui::SameLine();
-			ImGui::Text("[x1]");
-			ImGui::Text("LEA");
+			ImGui::TextColored(ImVec4(red1, green1, blue1, 1),"[x1]");
+			ImGui::TextColored(ImVec4(red1, green1, blue1, 1),"LEA");
 			ImGui::SameLine();
-			ImGui::Text((const char*)registr.c_str());
+			ImGui::TextColored(ImVec4(red1, green1, blue1, 1),(const char*)registr.c_str());
 			ImGui::SameLine();
-			ImGui::Text("x1");
+			ImGui::TextColored(ImVec4(red1, green1, blue1, 1),"x1");
 		}
 
 	}
@@ -990,21 +1052,21 @@ void gui::Render() noexcept
 		}
 		else
 		{
-			ImGui::Text("MOV");
+			ImGui::TextColored(ImVec4(red1, green1, blue1, 1),"MOV");
 			ImGui::SameLine();
-			ImGui::Text((const char*)registr.c_str());
+			ImGui::TextColored(ImVec4(red1, green1, blue1, 1),(const char*)registr.c_str());
 			ImGui::SameLine();
-			ImGui::Text("[x1]");
-			ImGui::Text("MOV");
+			ImGui::TextColored(ImVec4(red1, green1, blue1, 1),"[x1]");
+			ImGui::TextColored(ImVec4(red1, green1, blue1, 1),"MOV");
 			ImGui::SameLine();
-			ImGui::Text((const char*)registr.c_str());
+			ImGui::TextColored(ImVec4(red1, green1, blue1, 1),(const char*)registr.c_str());
 			ImGui::SameLine();
-			ImGui::Text("x1");
+			ImGui::TextColored(ImVec4(red1, green1, blue1, 1),"x1");
 	
 		}
 	}
 	ImGui::SetCursorPos(ImVec2(7, 200));
-	ImGui::PushStyleColor(ImGuiCol_Text, ImVec4(1, greenznach, blueznach, 1.0f));
+	ImGui::PushStyleColor(ImGuiCol_Text, ImVec4(redznach, greenznach, blueznach, 1.0f));
 	ImGui::SetNextItemWidth(ImGui::GetWindowWidth() * 0.2f);
 	ImGui::InputText("##hidden", bufznach, IM_ARRAYSIZE(bufznach), ImGuiInputTextFlags_CharsHexadecimal);
 	ImGui::PopStyleColor();
@@ -1051,11 +1113,11 @@ void gui::Render() noexcept
 	}
 	ImGui::SetNextItemWidth(ImGui::GetWindowWidth() * 0.15f);
 	ImGui::Combo((const char*)u8"Выбрать тип данных переменной x1", &NumberTypePeremennoi, TypePeremennoi, IM_ARRAYSIZE(TypePeremennoi));
-	ImGui::Text("x1");
+	ImGui::TextColored(ImVec4(red1, green1, blue1, 1),"x1");
 	ImGui::SameLine();
-	ImGui::Text(peremennai.c_str());
+	ImGui::TextColored(ImVec4(red1, green1, blue1, 1),peremennai.c_str());
 	ImGui::SameLine();
-	ImGui::Text((TypePeremennoi[NumberTypePeremennoi]));
+	ImGui::TextColored(ImVec4(red1, green1, blue1, 1),(TypePeremennoi[NumberTypePeremennoi]));
 	ImGui::EndChild();
 	ImGui::SameLine(410, 0);
 	ImGui::BeginChild("Адрес", ImVec2(115, 300), true);
@@ -1070,9 +1132,9 @@ void gui::Render() noexcept
 		adresbyte3 = adres.substr(4, 2);
 		adresbyte4 = adres.substr(6, 2);
 	}
-	ImGui::Text(" ");
-	ImGui::Text(" ");
-	ImGui::Text((const char*)u8"Адрес");
+	ImGui::TextColored(ImVec4(red1, green1, blue1, 1)," ");
+	ImGui::TextColored(ImVec4(red1, green1, blue1, 1)," ");
+	ImGui::TextColored(ImVec4(red1, green1, blue1, 1),(const char*)u8"Адрес");
 	if (NumberCommand == 0) {
 		if (chet >= 4.5 and chet <= 9)
 		{
@@ -1084,33 +1146,33 @@ void gui::Render() noexcept
 			ImGui::SameLine(0, 0);
 			BlinkingText(adresbyte4.c_str());
 			ImGui::SameLine(0, 0);
-			ImGui::Text("h==>");
+			ImGui::TextColored(ImVec4(red1, green1, blue1, 1),"h==>");
 		}
 		else
 		{
-			ImGui::Text(adresbyte1.c_str());
+			ImGui::TextColored(ImVec4(red1, green1, blue1, 1),adresbyte1.c_str());
 			ImGui::SameLine(0, 0);
-			ImGui::Text(adresbyte2.c_str());
+			ImGui::TextColored(ImVec4(red1, green1, blue1, 1),adresbyte2.c_str());
 			ImGui::SameLine(0, 0);
-			ImGui::Text(adresbyte3.c_str());
+			ImGui::TextColored(ImVec4(red1, green1, blue1, 1),adresbyte3.c_str());
 			ImGui::SameLine(0, 0);
-			ImGui::Text(adresbyte4.c_str());
+			ImGui::TextColored(ImVec4(red1, green1, blue1, 1),adresbyte4.c_str());
 			ImGui::SameLine(0, 0);
-			ImGui::Text("h==>");
+			ImGui::TextColored(ImVec4(red1, green1, blue1, 1),"h==>");
 		}
 	}
 	else
 	{
-		ImGui::TextColored(ImVec4(1, greenadres, blueadres, 1), adresbyte1.c_str());
+		ImGui::TextColored(ImVec4(redadres, greenadres, blueadres, 1), adresbyte1.c_str());
 		ImGui::SameLine(0, 0);
-		ImGui::TextColored(ImVec4(1, greenadres, blueadres, 1), adresbyte2.c_str());
+		ImGui::TextColored(ImVec4(redadres, greenadres, blueadres, 1), adresbyte2.c_str());
 		ImGui::SameLine(0, 0);
-		ImGui::TextColored(ImVec4(1, greenadres, blueadres, 1), adresbyte3.c_str());
+		ImGui::TextColored(ImVec4(redadres, greenadres, blueadres, 1), adresbyte3.c_str());
 		ImGui::SameLine(0, 0);
-		ImGui::TextColored(ImVec4(1, greenadres, blueadres, 1), adresbyte4.c_str());
+		ImGui::TextColored(ImVec4(redadres, greenadres, blueadres, 1), adresbyte4.c_str());
 		ImGui::SameLine(0, 0);
-		ImGui::TextColored(ImVec4(1, greenadres, blueadres,1),"h==>");
-		if (NumberRegistr % 4 == 1)
+		ImGui::TextColored(ImVec4(redadres, greenadres, blueadres,1),"h==>");
+		if (NumberRegistr % 4 == 1 and NumberCommand==1)
 		{
 
 			unsigned long long hexadres;
@@ -1125,8 +1187,8 @@ void gui::Render() noexcept
 				resultString = ss2.str();
 				while (size(resultString) < 8) resultString = "0" + resultString;
 				resultString += "h==>";
-				ImGui::Text("");
-				ImGui::TextColored(ImVec4(1, greenadres, blueadres, 1), resultString.c_str());
+				ImGui::TextColored(ImVec4(red1, green1, blue1, 1),"");
+				ImGui::TextColored(ImVec4(redadres, greenadres, blueadres, 1), resultString.c_str());
 			}
 		}
 		else if (NumberRegistr % 4 == 0 and NumberCommand==1)
@@ -1144,8 +1206,8 @@ void gui::Render() noexcept
 			resultString = ss2.str();
 				while (size(resultString) < 8) resultString = "0" + resultString;
 				resultString += "h==>";
-				ImGui::Text("");
-				ImGui::TextColored(ImVec4(1, greenadres, blueadres, 1), resultString.c_str());
+				ImGui::TextColored(ImVec4(red1, green1, blue1, 1),"");
+				ImGui::TextColored(ImVec4(redadres, greenadres, blueadres, 1), resultString.c_str());
 			}
 			resultString = "";
 			unsigned long long hexadres1;
@@ -1160,8 +1222,8 @@ void gui::Render() noexcept
 				resultString = ss4.str();
 				while (size(resultString) < 8) resultString = "0" + resultString;
 				resultString += "h==>";
-				ImGui::Text("");
-				ImGui::TextColored(ImVec4(1, greenadres, blueadres, 1), resultString.c_str());
+				ImGui::TextColored(ImVec4(red1, green1, blue1, 1),"");
+				ImGui::TextColored(ImVec4(redadres, greenadres, blueadres, 1), resultString.c_str());
 			}
 			resultString = "";
 			unsigned long long hexadres2;
@@ -1176,31 +1238,31 @@ void gui::Render() noexcept
 				resultString = ss6.str();
 				while (size(resultString) < 8) resultString = "0" + resultString;
 				resultString += "h==>";
-				ImGui::Text("");
-				ImGui::TextColored(ImVec4(1, greenadres, blueadres, 1), resultString.c_str());
+				ImGui::TextColored(ImVec4(red1, green1, blue1, 1),"");
+				ImGui::TextColored(ImVec4(redadres, greenadres, blueadres, 1), resultString.c_str());
 			}
 		}
 	}
 	ImGui::EndChild();
 	ImGui::SameLine(525, 0);
-	ImGui::BeginChild("Оперативка", ImVec2(100, 300), ImGuiWindowFlags_NoMove);
-	ImGui::Text((const char*)u8"Оперативная");
-	ImGui::Text((const char*)u8"Память");
-	ImGui::Text(" ");
-	ImGui::Text(" ");
-	ImGui::Text(" ");
+	ImGui::BeginChild("Оперативка", ImVec2(110, 300), ImGuiWindowFlags_NoMove);
+	ImGui::TextColored(ImVec4(red1, green1, blue1, 1),(const char*)u8"Оперативная");
+	ImGui::TextColored(ImVec4(red1, green1, blue1, 1),(const char*)u8"Память");
+	ImGui::TextColored(ImVec4(red1, green1, blue1, 1)," ");
+	ImGui::TextColored(ImVec4(red1, green1, blue1, 1)," ");
+	ImGui::TextColored(ImVec4(red1, green1, blue1, 1)," ");
 	ImGui::BeginChild("Значение1", ImVec2(87, 40), true);
 	if (chet >= 4.5f and chet <= 9.0f and NumberCommand==1)
 	{
-		ImGui::Text("  ");
+		ImGui::TextColored(ImVec4(red1, green1, blue1, 1),"  ");
 		ImGui::SameLine(0, 0);
 		BlinkingText(znachbyte1.c_str());
 	}
 	else
 	{
-		ImGui::Text("  ");
+		ImGui::TextColored(ImVec4(red1, green1, blue1, 1),"  ");
 		ImGui::SameLine(0, 0);
-		ImGui::Text(znachbyte1.c_str());
+		ImGui::TextColored(ImVec4(red1, green1, blue1, 1),znachbyte1.c_str());
 	}
 	ImGui::EndChild();
 	if (NumberCommand == 1)
@@ -1210,43 +1272,43 @@ void gui::Render() noexcept
 			ImGui::BeginChild("Значение2", ImVec2(87, 40), true);
 			if (chet >= 9.0f and chet <= 13.5f)
 			{
-				ImGui::Text("  ");
+				ImGui::TextColored(ImVec4(red1, green1, blue1, 1),"  ");
 				ImGui::SameLine(0, 0);
 				BlinkingText(znachbyte2.c_str());
 			}
 			else
 			{
-				ImGui::Text("  ");
+				ImGui::TextColored(ImVec4(red1, green1, blue1, 1),"  ");
 				ImGui::SameLine(0, 0);
-				ImGui::Text(znachbyte2.c_str());
+				ImGui::TextColored(ImVec4(red1, green1, blue1, 1),znachbyte2.c_str());
 			}
 			ImGui::EndChild();
 			ImGui::BeginChild("Значение3", ImVec2(87, 40), true);
 			if (chet >= 13.5 and chet <= 18)
 			{
-				ImGui::Text("  ");
+				ImGui::TextColored(ImVec4(red1, green1, blue1, 1),"  ");
 				ImGui::SameLine(0, 0);
 				BlinkingText(znachbyte3.c_str());
 			}
 			else
 			{
-				ImGui::Text("  ");
+				ImGui::TextColored(ImVec4(red1, green1, blue1, 1),"  ");
 				ImGui::SameLine(0, 0);
-				ImGui::Text(znachbyte3.c_str());
+				ImGui::TextColored(ImVec4(red1, green1, blue1, 1),znachbyte3.c_str());
 			}
 			ImGui::EndChild();
 			ImGui::BeginChild("Значение4", ImVec2(87, 40), true);
 			if (chet >= 18 and chet <= 22.5)
 			{
-				ImGui::Text("  ");
+				ImGui::TextColored(ImVec4(red1, green1, blue1, 1),"  ");
 				ImGui::SameLine(0, 0);
 				BlinkingText(znachbyte4.c_str());
 			}
 			else
 			{
-				ImGui::Text("  ");
+				ImGui::TextColored(ImVec4(red1, green1, blue1, 1),"  ");
 				ImGui::SameLine(0, 0);
-				ImGui::Text(znachbyte4.c_str());
+				ImGui::TextColored(ImVec4(red1, green1, blue1, 1),znachbyte4.c_str());
 			}
 			ImGui::EndChild();
 		}
@@ -1255,15 +1317,15 @@ void gui::Render() noexcept
 			ImGui::BeginChild("Значение2", ImVec2(87, 40), true);
 			if (chet >= 9.0f and chet <= 13.5f)
 			{
-				ImGui::Text("  ");
+				ImGui::TextColored(ImVec4(red1, green1, blue1, 1),"  ");
 				ImGui::SameLine(0, 0);
 				BlinkingText(znachbyte2.c_str());
 			}
 			else
 			{
-				ImGui::Text("  ");
+				ImGui::TextColored(ImVec4(red1, green1, blue1, 1),"  ");
 				ImGui::SameLine(0, 0);
-				ImGui::Text(znachbyte2.c_str());
+				ImGui::TextColored(ImVec4(red1, green1, blue1, 1),znachbyte2.c_str());
 			}
 			ImGui::EndChild();
 		}
@@ -1272,10 +1334,12 @@ void gui::Render() noexcept
 	ImGui::BeginChild("Откладка", ImVec2(625, 150), true);
 	if (error == 0)
 	{
-		greenznach = 1;
-		blueznach = 1;
-		greenadres = 1;
-		blueadres = 1;
+		greenznach = green1;
+		blueznach = blue1;
+		redznach = red1;
+		greenadres = green1;
+		blueadres = blue1;
+		redadres = red1;
 	}
 	else if (error == 1)
 	{
@@ -1287,7 +1351,7 @@ void gui::Render() noexcept
 		ImGui::TextColored(ImVec4(1.0, 0.0, 0.0, 1.0), (const char*)u8"Ошибка: Числовое значение переменной больше положенного");
 		greenznach = 0;
 		blueznach = 0;
-
+		redznach = 1;
 	}
 	else if (error == 3)
 	{
@@ -1303,7 +1367,7 @@ void gui::Render() noexcept
 		ImGui::TextColored(ImVec4(1.0, 0.0, 0.0, 1.0), (const char*)u8"Ошибка: Выход за диапазон адресов ");
 		greenadres = 0;
 		blueadres = 0;
-
+		redadres = 1;
 	}
 	else if (error == 6)
 	{
