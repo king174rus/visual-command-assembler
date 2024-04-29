@@ -7,6 +7,8 @@
 #include <iostream>
 #include "string"
 #include <chrono>
+#include <algorithm> // для std::transform
+#include <cctype>    // для std::toupper
 
 using namespace std::chrono;
 using namespace std;
@@ -310,7 +312,7 @@ float timer = 0.0f;
 float chet = 0.0f;
 int error = 0;
 bool isBlinking = false;
-
+string byteregistrs[4][4] = { {"00","00","00","00"},{"00","00","00","00"} ,{"00","00","00","00"} ,{"00","00","00","00"} };
 void BlinkingText(const char* text)
 {
 	if (isBlinking)
@@ -335,12 +337,10 @@ void gui::Render() noexcept
 	ImGui::SetNextWindowPos({ 0, 0 });
 	ImGui::SetNextWindowSize({ WIDTH, HEIGHT });
 	ImGui::PushStyleColor(ImGuiCol_WindowBg, ImVec4(red, green, blue, 1.0f)); // Устанавливаем цвет фона окна на тёмно-серый
-	ImGui::PushStyleColor(ImGuiCol_Text, ImVec4(red1, green1, blue1, 1.0f));
-	ImGui::PushStyleColor(ImGuiCol_Button, ImVec4(redbutton, greenbutton, bluebutton, 1.0f));
-	ImGui::PushStyleColor(ImGuiCol_PopupBg, ImVec4(red, green, blue, 1.0f)); // Установите цвет для выпадающего окна
+
 
 	ImGui::Begin(
-		(const char*)u8"Курсовая",
+		(const char*)u8"Visual Command Assembler",
 		&isRunning,
 		ImGuiWindowFlags_NoResize |
 		ImGuiWindowFlags_NoSavedSettings |
@@ -348,13 +348,32 @@ void gui::Render() noexcept
 		ImGuiWindowFlags_NoMove |
 		ImGuiWindowFlags_MenuBar
 	);
-	//ImGui::PopStyleColor(); // Возвращаем стандартный цвет фона окна
+	ImGui::PushStyleColor(ImGuiCol_Text, ImVec4(red1, green1, blue1, 1.0f));
+	ImGui::PushStyleColor(ImGuiCol_Button, ImVec4(redbutton, greenbutton, bluebutton, 1.0f));
+	ImGui::PushStyleColor(ImGuiCol_PopupBg, ImVec4(red, green, blue, 1.0f)); // Установите цвет для выпадающего окна
+	
 	ImGui::TextColored(ImVec4(red1, green1, blue1, 1),(const char*)u8"Регистр");
 	ImGui::SameLine();
 	ImGui::SetNextItemWidth(ImGui::GetWindowWidth() * 0.08f);
 	ImGui::Combo((const char*)u8"", &NumberRegistr, Registres, IM_ARRAYSIZE(Registres));
 	registr = Registres[NumberRegistr];
 	ImGui::SameLine(670, 0);
+	std::transform(znachbyte1.begin(), znachbyte1.end(), znachbyte1.begin(),
+		[](unsigned char c) { return std::toupper(c); });
+	std::transform(znachbyte2.begin(), znachbyte2.end(), znachbyte2.begin(),
+		[](unsigned char c) { return std::toupper(c); });
+	std::transform(znachbyte3.begin(), znachbyte3.end(), znachbyte3.begin(),
+		[](unsigned char c) { return std::toupper(c); });
+	std::transform(znachbyte4.begin(), znachbyte4.end(), znachbyte4.begin(),
+		[](unsigned char c) { return std::toupper(c); });
+	std::transform(byte1.begin(), byte1.end(), byte1.begin(),
+		[](unsigned char c) { return std::toupper(c); });
+	std::transform(byte2.begin(), byte2.end(), byte2.begin(),
+		[](unsigned char c) { return std::toupper(c); });
+	std::transform(byte3.begin(), byte3.end(), byte3.begin(),
+		[](unsigned char c) { return std::toupper(c); });
+	std::transform(byte4.begin(), byte4.end(), byte4.begin(),
+		[](unsigned char c) { return std::toupper(c); });
 	if (ImGui::Button((const char*)u8"Сменить тему")) {
 		if (green == 1) {
 			green = 0;
@@ -521,6 +540,10 @@ void gui::Render() noexcept
 			byte2 = adresbyte2;
 			byte3 = adresbyte3;
 			byte4 = adresbyte4;
+			byteregistrs[NumberRegistr / 4][0] = adresbyte1;
+			byteregistrs[NumberRegistr / 4][1] = adresbyte2;
+			byteregistrs[NumberRegistr / 4][2] = adresbyte3;
+			byteregistrs[NumberRegistr / 4][3] = adresbyte4;
 			ImGui::BeginChild("byte1", ImVec2(40, 40), true);
 			ImGui::TextColored(ImVec4(red1, green1, blue1, 1),(const char*)byte1.c_str());
 			ImGui::EndChild();
@@ -989,9 +1012,10 @@ void gui::Render() noexcept
 		if (NumberCommand == -1) error = 6;
 		else if (NumberCommand == 0)
 		{
-			if (NumberRegistr % 4 == 0 or NumberRegistr % 4 == 1) isBlinking = !isBlinking;
+			if (NumberRegistr % 4 == 0 or NumberRegistr %4 == 1) isBlinking = !isBlinking;
 			else error = 1;
 		}
+		
 		else
 		{
 			if (NumberRegistr % 4 == 0 and NumberTypePeremennoi == 0) isBlinking = !isBlinking;
@@ -1006,6 +1030,11 @@ void gui::Render() noexcept
 	ImGui::PopStyleColor(2);
 	if (NumberCommand == 0) 
 	{
+		if (redadres != 1) {
+			redadres = red1;
+			greenadres = green1;
+			blueadres = blue1;
+		}
 		if (chet >= 0 and chet <= 4.5)
 		{
 			BlinkingText("LEA");
@@ -1036,6 +1065,11 @@ void gui::Render() noexcept
 	}
 	if (NumberCommand == 1)
 	{
+		if (redadres != 1) {
+			redadres = 0.5;
+			greenadres = 0.5;
+			blueadres = 0.5;
+		}
 		if (chet >= 0 and chet <= 4.5)
 		{
 			BlinkingText("MOV");
@@ -1066,10 +1100,15 @@ void gui::Render() noexcept
 		}
 	}
 	ImGui::SetCursorPos(ImVec2(7, 200));
+	if (error != 2) {
+		redznach = red1;
+		greenznach = green1;
+		blueznach = blue1;
+	}
 	ImGui::PushStyleColor(ImGuiCol_Text, ImVec4(redznach, greenznach, blueznach, 1.0f));
 	ImGui::SetNextItemWidth(ImGui::GetWindowWidth() * 0.2f);
 	ImGui::InputText("##hidden", bufznach, IM_ARRAYSIZE(bufznach), ImGuiInputTextFlags_CharsHexadecimal);
-	ImGui::PopStyleColor();
+	ImGui::PopStyleColor(1);
 	ImGui::SameLine();
 	if (ImGui::Button((const char*)u8"Ввести переменную х1"))
 	{
@@ -1115,6 +1154,8 @@ void gui::Render() noexcept
 	ImGui::Combo((const char*)u8"Выбрать тип данных переменной x1", &NumberTypePeremennoi, TypePeremennoi, IM_ARRAYSIZE(TypePeremennoi));
 	ImGui::TextColored(ImVec4(red1, green1, blue1, 1),"x1");
 	ImGui::SameLine();
+	std::transform(peremennai.begin(), peremennai.end(), peremennai.begin(),
+		[](unsigned char c) { return std::toupper(c); });
 	ImGui::TextColored(ImVec4(red1, green1, blue1, 1),peremennai.c_str());
 	ImGui::SameLine();
 	ImGui::TextColored(ImVec4(red1, green1, blue1, 1),(TypePeremennoi[NumberTypePeremennoi]));
@@ -1135,9 +1176,18 @@ void gui::Render() noexcept
 	ImGui::TextColored(ImVec4(red1, green1, blue1, 1)," ");
 	ImGui::TextColored(ImVec4(red1, green1, blue1, 1)," ");
 	ImGui::TextColored(ImVec4(red1, green1, blue1, 1),(const char*)u8"Адрес");
+	std::transform(adresbyte1.begin(), adresbyte1.end(), adresbyte1.begin(),
+		[](unsigned char c) { return std::toupper(c); });
+	std::transform(adresbyte2.begin(), adresbyte2.end(), adresbyte2.begin(),
+		[](unsigned char c) { return std::toupper(c); });
+	std::transform(adresbyte3.begin(), adresbyte3.end(), adresbyte3.begin(),
+		[](unsigned char c) { return std::toupper(c); });
+	std::transform(adresbyte4.begin(), adresbyte4.end(), adresbyte4.begin(),
+		[](unsigned char c) { return std::toupper(c); });
 	if (NumberCommand == 0) {
-		if (chet >= 4.5 and chet <= 9)
+		if (chet >= 4.5 and chet <= 9  and NumberRegistr %4  == 0)
 		{
+
 			BlinkingText(adresbyte1.c_str());
 			ImGui::SameLine(0, 0);
 			BlinkingText(adresbyte2.c_str());
@@ -1148,17 +1198,29 @@ void gui::Render() noexcept
 			ImGui::SameLine(0, 0);
 			ImGui::TextColored(ImVec4(red1, green1, blue1, 1),"h==>");
 		}
-		else
+		else if (chet >= 4.5 and chet <= 9 and NumberRegistr % 4 == 1)
 		{
-			ImGui::TextColored(ImVec4(red1, green1, blue1, 1),adresbyte1.c_str());
+			ImGui::TextColored(ImVec4(red1, green1, blue1, 1), adresbyte1.c_str());
 			ImGui::SameLine(0, 0);
-			ImGui::TextColored(ImVec4(red1, green1, blue1, 1),adresbyte2.c_str());
+			ImGui::TextColored(ImVec4(red1, green1, blue1, 1), adresbyte2.c_str());
+			ImGui::SameLine(0, 0);			
+			BlinkingText(adresbyte3.c_str());
 			ImGui::SameLine(0, 0);
-			ImGui::TextColored(ImVec4(red1, green1, blue1, 1),adresbyte3.c_str());
+			BlinkingText(adresbyte4.c_str());
 			ImGui::SameLine(0, 0);
-			ImGui::TextColored(ImVec4(red1, green1, blue1, 1),adresbyte4.c_str());
+			ImGui::TextColored(ImVec4(red1, green1, blue1, 1), "h==>");
+		}
+		else 
+		{
+			ImGui::TextColored(ImVec4(redadres, greenadres, blueadres, 1),adresbyte1.c_str());
 			ImGui::SameLine(0, 0);
-			ImGui::TextColored(ImVec4(red1, green1, blue1, 1),"h==>");
+			ImGui::TextColored(ImVec4(redadres, greenadres, blueadres, 1),adresbyte2.c_str());
+			ImGui::SameLine(0, 0);
+			ImGui::TextColored(ImVec4(redadres, greenadres, blueadres, 1),adresbyte3.c_str());
+			ImGui::SameLine(0, 0);
+			ImGui::TextColored(ImVec4(redadres, greenadres, blueadres, 1),adresbyte4.c_str());
+			ImGui::SameLine(0, 0);
+			ImGui::TextColored(ImVec4(redadres, greenadres, blueadres, 1),"h==>");
 		}
 	}
 	else
@@ -1171,8 +1233,9 @@ void gui::Render() noexcept
 		ImGui::SameLine(0, 0);
 		ImGui::TextColored(ImVec4(redadres, greenadres, blueadres, 1), adresbyte4.c_str());
 		ImGui::SameLine(0, 0);
-		ImGui::TextColored(ImVec4(redadres, greenadres, blueadres,1),"h==>");
-		if (NumberRegistr % 4 == 1 and NumberCommand==1)
+		ImGui::TextColored(ImVec4(redadres, greenadres, blueadres, 1), "h==>");
+	}
+		if (NumberTypePeremennoi % 4 == 1)
 		{
 
 			unsigned long long hexadres;
@@ -1185,13 +1248,15 @@ void gui::Render() noexcept
 			if (size(ss2.str()) == 9) error = 5;
 			else {
 				resultString = ss2.str();
+				std::transform(resultString.begin(), resultString.end(), resultString.begin(),
+					[](unsigned char c) { return std::toupper(c); });
 				while (size(resultString) < 8) resultString = "0" + resultString;
 				resultString += "h==>";
 				ImGui::TextColored(ImVec4(red1, green1, blue1, 1),"");
-				ImGui::TextColored(ImVec4(redadres, greenadres, blueadres, 1), resultString.c_str());
+				ImGui::TextColored(ImVec4(0.5, 0.5, 0.5, 1), resultString.c_str());
 			}
 		}
-		else if (NumberRegistr % 4 == 0 and NumberCommand==1)
+		else if (NumberTypePeremennoi % 4 == 0)
 		{
 
 			unsigned long long hexadres;
@@ -1204,10 +1269,12 @@ void gui::Render() noexcept
 			if (size(ss2.str()) == 9) error = 5;
 			else {
 			resultString = ss2.str();
+			std::transform(resultString.begin(), resultString.end(), resultString.begin(),
+				[](unsigned char c) { return std::toupper(c); });
 				while (size(resultString) < 8) resultString = "0" + resultString;
 				resultString += "h==>";
 				ImGui::TextColored(ImVec4(red1, green1, blue1, 1),"");
-				ImGui::TextColored(ImVec4(redadres, greenadres, blueadres, 1), resultString.c_str());
+				ImGui::TextColored(ImVec4(0.5, 0.5, 0.5, 1), resultString.c_str());
 			}
 			resultString = "";
 			unsigned long long hexadres1;
@@ -1220,10 +1287,12 @@ void gui::Render() noexcept
 			if (size(ss4.str()) == 9) error = 5;
 			else {
 				resultString = ss4.str();
+				std::transform(resultString.begin(), resultString.end(), resultString.begin(),
+					[](unsigned char c) { return std::toupper(c); });
 				while (size(resultString) < 8) resultString = "0" + resultString;
 				resultString += "h==>";
 				ImGui::TextColored(ImVec4(red1, green1, blue1, 1),"");
-				ImGui::TextColored(ImVec4(redadres, greenadres, blueadres, 1), resultString.c_str());
+				ImGui::TextColored(ImVec4(0.5, 0.5, 0.5, 1), resultString.c_str());
 			}
 			resultString = "";
 			unsigned long long hexadres2;
@@ -1236,13 +1305,15 @@ void gui::Render() noexcept
 			if (size(ss6.str()) == 9) error = 5;
 			else {
 				resultString = ss6.str();
+				std::transform(resultString.begin(), resultString.end(), resultString.begin(),
+					[](unsigned char c) { return std::toupper(c); });
 				while (size(resultString) < 8) resultString = "0" + resultString;
 				resultString += "h==>";
 				ImGui::TextColored(ImVec4(red1, green1, blue1, 1),"");
-				ImGui::TextColored(ImVec4(redadres, greenadres, blueadres, 1), resultString.c_str());
+				ImGui::TextColored(ImVec4(0.5, 0.5, 0.5, 1), resultString.c_str());
 			}
 		}
-	}
+
 	ImGui::EndChild();
 	ImGui::SameLine(525, 0);
 	ImGui::BeginChild("Оперативка", ImVec2(110, 300), ImGuiWindowFlags_NoMove);
@@ -1265,12 +1336,10 @@ void gui::Render() noexcept
 		ImGui::TextColored(ImVec4(red1, green1, blue1, 1),znachbyte1.c_str());
 	}
 	ImGui::EndChild();
-	if (NumberCommand == 1)
-	{
-		if (NumberRegistr % 4 == 0)
+		if (NumberTypePeremennoi % 4 == 0)
 		{
 			ImGui::BeginChild("Значение2", ImVec2(87, 40), true);
-			if (chet >= 9.0f and chet <= 13.5f)
+			if (chet >= 9.0f and chet <= 13.5f and NumberCommand == 1)
 			{
 				ImGui::TextColored(ImVec4(red1, green1, blue1, 1),"  ");
 				ImGui::SameLine(0, 0);
@@ -1284,7 +1353,7 @@ void gui::Render() noexcept
 			}
 			ImGui::EndChild();
 			ImGui::BeginChild("Значение3", ImVec2(87, 40), true);
-			if (chet >= 13.5 and chet <= 18)
+			if (chet >= 13.5 and chet <= 18 and NumberCommand == 1)
 			{
 				ImGui::TextColored(ImVec4(red1, green1, blue1, 1),"  ");
 				ImGui::SameLine(0, 0);
@@ -1312,10 +1381,10 @@ void gui::Render() noexcept
 			}
 			ImGui::EndChild();
 		}
-		else if (NumberRegistr % 4 == 1)
+		else if (NumberTypePeremennoi % 4 == 1)
 		{
 			ImGui::BeginChild("Значение2", ImVec2(87, 40), true);
-			if (chet >= 9.0f and chet <= 13.5f)
+			if (chet >= 9.0f and chet <= 13.5f and NumberCommand == 1)
 			{
 				ImGui::TextColored(ImVec4(red1, green1, blue1, 1),"  ");
 				ImGui::SameLine(0, 0);
@@ -1329,7 +1398,6 @@ void gui::Render() noexcept
 			}
 			ImGui::EndChild();
 		}
-	}
 	ImGui::EndChild();
 	ImGui::BeginChild("Откладка", ImVec2(625, 150), true);
 	if (error == 0)
@@ -1344,11 +1412,12 @@ void gui::Render() noexcept
 	else if (error == 1)
 	{
 		ImGui::TextColored(ImVec4(1.0, 0.0, 0.0, 1.0), (const char*)u8"Ошибка: Этот регистр не может быть использован для команды lea.");
-		ImGui::TextColored(ImVec4(1.0, 0.0, 0.0, 1.0), (const char*)u8"Нужно использовать регистр размера x16 или x32");
+		ImGui::TextColored(ImVec4(0.0, 1.0, 0.0, 1.0), (const char*)u8"Нужно использовать регистр размера x16 или x32");
 	}
 	else if (error == 2)
 	{
 		ImGui::TextColored(ImVec4(1.0, 0.0, 0.0, 1.0), (const char*)u8"Ошибка: Числовое значение переменной больше положенного");
+		ImGui::TextColored(ImVec4(0, 1.0, 0.0, 1.0), (const char*)u8"Нужно увеличить тип переменной или уменьшить ее числовое значение");
 		greenznach = 0;
 		blueznach = 0;
 		redznach = 1;
@@ -1356,15 +1425,18 @@ void gui::Render() noexcept
 	else if (error == 3)
 	{
 		ImGui::TextColored(ImVec4(1.0, 0.0, 0.0, 1.0), (const char*)u8"Ошибка: Регистр больше переменной x1");
+		ImGui::TextColored(ImVec4(0, 1.0, 0.0, 1.0), (const char*)u8"Нужно увеличить переменную или уменьшить регистр");
 	}
 	else if (error == 4)
 	{
 		ImGui::TextColored(ImVec4(1.0, 0.0, 0.0, 1.0), (const char*)u8"Ошибка: Переменная x1 больше регистра ");
+		ImGui::TextColored(ImVec4(0, 1.0, 0.0, 1.0), (const char*)u8"Нужно увеличить регистр или уменьшить переменную");
 
 	}
 	else if (error == 5)
 	{
 		ImGui::TextColored(ImVec4(1.0, 0.0, 0.0, 1.0), (const char*)u8"Ошибка: Выход за диапазон адресов ");
+		ImGui::TextColored(ImVec4(0.0, 1.0, 0.0, 1.0), (const char*)u8"Нужно уменьшить адрес ");
 		greenadres = 0;
 		blueadres = 0;
 		redadres = 1;
@@ -1375,5 +1447,21 @@ void gui::Render() noexcept
 
 	}
 	ImGui::EndChild();
+	ImGui::TextColored(ImVec4(red1, green1, blue1, 1),(const char*)u8"Мои ссылки");
+	ImGui::Separator();
+
+	if (ImGui::Button("YouTube")) {
+		ShellExecute(NULL, "open", "https://www.youtube.com/c/@king174rus", 0, 0, SW_SHOWNORMAL);
+	}
+	ImGui::SameLine(); ImGui::Text(" "); ImGui::SameLine();
+	if (ImGui::Button((const char*)u8"GitHub")) {
+		ShellExecute(NULL, "open", "https://github.com/king174rus", 0, 0, SW_SHOWNORMAL);
+	}
+	ImGui::TextColored(ImVec4(0.5, 0.5, 0.5, 1), byteregistrs[NumberRegistr/4][0].c_str());
+	ImGui::TextColored(ImVec4(0.5, 0.5, 0.5, 1), byteregistrs[NumberRegistr / 4][1].c_str());
+	ImGui::TextColored(ImVec4(0.5, 0.5, 0.5, 1), byteregistrs[NumberRegistr / 4][2].c_str());
+	ImGui::TextColored(ImVec4(0.5, 0.5, 0.5, 1), byteregistrs[NumberRegistr / 4][3].c_str());
+	ImGui::PopStyleColor(4); // Возвращаем стандартный цвет фона окна
+
 	ImGui::End();
 }
