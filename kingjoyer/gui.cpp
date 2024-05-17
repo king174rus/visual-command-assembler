@@ -281,6 +281,10 @@ string znachbyte1 = "20";
 string znachbyte2 = "11";
 string znachbyte3 = "5A";
 string znachbyte4 = "4B";
+string znachperemenbyte1 = "20";
+string znacperemenhbyte2 = "11";
+string znacperemenhbyte3 = "5A";
+string znacperemenhbyte4 = "4B";
 string registr = " ";
 string peremennai = "4B5A1120";
 string adres = "0005A420";
@@ -305,6 +309,9 @@ const char* Registres[] = { "EAX", "AX", "AH", "AL","EBX", "BX", "BH", "BL" ,"EC
 static int NumberRegistr = 0;
 const char* TypePeremennoi[] = { "dd", "dw", "db"};
 static int NumberTypePeremennoi = 0;
+const char* Elements[] = { "x1", "[x1]", "EAX", "AX", "AH", "AL","EBX", "BX", "BH", "BL" ,"ECX", "CX", "CH", "CL" ,"EDX", "DX", "DH", "DL" };
+static int NumberElements = 0;
+
 
 const char* Commads[] = {"LEA", "MOV"};
 static int NumberCommand = -1;
@@ -332,6 +339,25 @@ void BlinkingText(const char* text)
 	}
 	ImGui::TextColored(ImVec4(red1, green1, blue1, 1),text);
 }
+void BlinkingCombo(const char* text, int* a, const char* const b, int c)
+{
+	if (isBlinking) 
+	{
+		timer += ImGui::GetIO().DeltaTime;
+
+		if (timer > 3.0f)
+		{
+			timer = 0.0f;
+		}
+		else if (timer > 1.5f)
+		{
+			chet += ImGui::GetIO().DeltaTime;
+			ImGui::Combo(text, a, b, c);
+			return;
+		}
+	}
+}
+
 void gui::Render() noexcept
 {
 	ImGui::SetNextWindowPos({ 0, 0 });
@@ -1008,18 +1034,19 @@ void gui::Render() noexcept
 		if (NumberCommand == -1) error = 6;
 		else if (NumberCommand == 0)
 		{
-			if (NumberRegistr % 4 == 0 or NumberRegistr %4 == 1) isBlinking = !isBlinking;
+			if ((NumberRegistr % 4 == 0 or NumberRegistr % 4 == 1) and NumberElements <= 1) isBlinking = !isBlinking;
+			else if (NumberElements > 1) error = 7;
 			else error = 1;
 		}
 		
 		else
 		{
-			if (NumberRegistr % 4 == 0 and NumberTypePeremennoi == 0) isBlinking = !isBlinking;
-			else if (NumberRegistr % 4 == 0 and NumberTypePeremennoi != 0) error = 3;
-			else if (NumberRegistr % 4 == 1 and NumberTypePeremennoi == 1) isBlinking = !isBlinking;
-			else if (NumberRegistr % 4 == 1 and NumberTypePeremennoi == 0) error = 4;
-			else if (NumberRegistr % 4 == 1 and NumberTypePeremennoi == 2) error = 3;
-			else if ((NumberRegistr % 4 == 2 or NumberRegistr % 4 == 3) and NumberTypePeremennoi == 2) isBlinking = !isBlinking;
+			if (NumberRegistr % 4 == 0 and (NumberTypePeremennoi == 0 or (NumberElements-2)%4==0)) isBlinking = !isBlinking;
+			else if (NumberRegistr % 4 == 0 and (NumberTypePeremennoi != 0 or (NumberElements - 2) % 4 != 0)) error = 3;
+			else if (NumberRegistr % 4 == 1 and (NumberTypePeremennoi == 1 or (NumberElements - 2) % 4 == 1)) isBlinking = !isBlinking;
+			else if (NumberRegistr % 4 == 1 and (NumberTypePeremennoi == 0 or (NumberElements - 2) % 4 == 0)) error = 4;
+			else if (NumberRegistr % 4 == 1 and (NumberTypePeremennoi == 2 or (NumberElements - 2) % 4 >= 2)) error = 3;
+			else if ((NumberRegistr % 4 == 2 or NumberRegistr % 4 == 3) and (NumberTypePeremennoi == 2 or (NumberElements - 2) % 4 >= 2)) isBlinking = !isBlinking;
 			else error = 4;
 		}
 	}
@@ -1037,12 +1064,9 @@ void gui::Render() noexcept
 			ImGui::SameLine();
 			BlinkingText((const char*)registr.c_str());
 			ImGui::SameLine();
-			BlinkingText("[x1]");
-			BlinkingText("LEA");
-			ImGui::SameLine();
-			BlinkingText((const char*)registr.c_str());
-			ImGui::SameLine();
-			BlinkingText("x1");
+			ImGui::SetNextItemWidth(ImGui::GetWindowWidth() * 0.15f);
+			//BlinkingCombo("",  &NumberElements, Elements, IM_ARRAYSIZE(Elements));
+			ImGui::Combo((const char*)u8"", &NumberElements, Elements, IM_ARRAYSIZE(Elements));
 		}
 		else
 		{
@@ -1050,12 +1074,8 @@ void gui::Render() noexcept
 			ImGui::SameLine();
 			ImGui::TextColored(ImVec4(red1, green1, blue1, 1),(const char*)registr.c_str());
 			ImGui::SameLine();
-			ImGui::TextColored(ImVec4(red1, green1, blue1, 1),"[x1]");
-			ImGui::TextColored(ImVec4(red1, green1, blue1, 1),"LEA");
-			ImGui::SameLine();
-			ImGui::TextColored(ImVec4(red1, green1, blue1, 1),(const char*)registr.c_str());
-			ImGui::SameLine();
-			ImGui::TextColored(ImVec4(red1, green1, blue1, 1),"x1");
+			ImGui::SetNextItemWidth(ImGui::GetWindowWidth() * 0.15f);
+			ImGui::Combo((const char*)u8"", &NumberElements, Elements, IM_ARRAYSIZE(Elements));
 		}
 
 	}
@@ -1072,12 +1092,8 @@ void gui::Render() noexcept
 			ImGui::SameLine();
 			BlinkingText((const char*)registr.c_str());
 			ImGui::SameLine();
-			BlinkingText("[x1]");
-			BlinkingText("MOV");
-			ImGui::SameLine();
-			BlinkingText((const char*)registr.c_str());
-			ImGui::SameLine();
-			BlinkingText("x1");
+			ImGui::SetNextItemWidth(ImGui::GetWindowWidth() * 0.15f);
+			ImGui::Combo((const char*)u8"", &NumberElements, Elements, IM_ARRAYSIZE(Elements));
 	
 		}
 		else
@@ -1086,13 +1102,40 @@ void gui::Render() noexcept
 			ImGui::SameLine();
 			ImGui::TextColored(ImVec4(red1, green1, blue1, 1),(const char*)registr.c_str());
 			ImGui::SameLine();
-			ImGui::TextColored(ImVec4(red1, green1, blue1, 1),"[x1]");
-			ImGui::TextColored(ImVec4(red1, green1, blue1, 1),"MOV");
-			ImGui::SameLine();
-			ImGui::TextColored(ImVec4(red1, green1, blue1, 1),(const char*)registr.c_str());
-			ImGui::SameLine();
-			ImGui::TextColored(ImVec4(red1, green1, blue1, 1),"x1");
+			ImGui::SetNextItemWidth(ImGui::GetWindowWidth() * 0.15f);
+			ImGui::Combo((const char*)u8"", &NumberElements, Elements, IM_ARRAYSIZE(Elements));
 	
+		}
+	}
+	if (NumberElements>1) 
+	{
+		znachbyte1 = byteregistrs[(NumberElements - 2) / 4][3];
+		znachbyte2 = byteregistrs[(NumberElements - 2) / 4][2];
+		znachbyte3 = byteregistrs[(NumberElements - 2) / 4][1];
+		znachbyte4 = byteregistrs[(NumberElements - 2) / 4][0];
+	}
+	else 
+	{
+		if (NumberTypePeremennoi == 0)
+		{
+			znachbyte4 = peremennai.substr(0, 2);
+			znachbyte3 = peremennai.substr(2, 2);
+			znachbyte2 = peremennai.substr(4, 2);
+			znachbyte1 = peremennai.substr(6, 2);
+		}
+		else if (NumberTypePeremennoi == 1)
+		{
+			znachbyte2 = peremennai.substr(0, 2);
+			znachbyte1 = peremennai.substr(2, 2);
+			znachbyte4 = "";
+			znachbyte3 = "";
+		}
+		else
+		{
+			znachbyte1 = peremennai.substr(0, 2);
+			znachbyte4 = "";
+			znachbyte3 = "";
+			znachbyte2 = "";
 		}
 	}
 	ImGui::SetCursorPos(ImVec2(7, 200));
@@ -1397,7 +1440,7 @@ void gui::Render() noexcept
 	ImGui::EndChild();
 	ImGui::SameLine(635, 0);
 	ImGui::BeginChild("Регистры", ImVec2(140, 300), ImGuiWindowFlags_NoMove);
-	ImGui::TextColored(ImVec4(red1, green1, blue1, 1), " ");
+	ImGui::TextColored(ImVec4(red1, green1, blue1, 1), (const char*)u8"  Регистры");
 	ImGui::TextColored(ImVec4(red1, green1, blue1, 1), " ");
 	ImGui::TextColored(ImVec4(red1, green1, blue1, 1), " ");
 	ImGui::TextColored(ImVec4(red1, green1, blue1, 1), " ");
@@ -1475,6 +1518,11 @@ void gui::Render() noexcept
 	{
 		ImGui::TextColored(ImVec4(1.0, 0.0, 0.0, 1.0), (const char*)u8"Выберите команду");
 
+	}
+	else if (error == 7)
+	{
+		ImGui::TextColored(ImVec4(1.0, 0.0, 0.0, 1.0), (const  char*)u8"Нельзя найти адрес регистра");
+		ImGui::TextColored(ImVec4(0.0, 1.0, 0.0, 1.0), (const char*)u8"Нужно выбрать переменную");
 	}
 	ImGui::EndChild();
 	ImGui::TextColored(ImVec4(red1, green1, blue1, 1),(const char*)u8"Мои ссылки");
