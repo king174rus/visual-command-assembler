@@ -324,6 +324,7 @@ int error = 0;
 bool isBlinking = false;
 string byteregistrs[4][4] = { {"00","00","00","00"},{"00","00","00","00"} ,{"00","00","00","00"} ,{"00","00","00","00"} };
 int otchet = 0;
+
 void BlinkingText(const char* text)
 {
 	if (isBlinking)
@@ -343,7 +344,34 @@ void BlinkingText(const char* text)
 	}
 	ImGui::TextColored(ImVec4(red1, green1, blue1, 1),text);
 }
-
+void ByteText(string byte[4])
+{
+	ImGuiID id;
+	for (int i = 0; i < 4; i++)
+	{
+		id = i;
+		ImGui::BeginChild(id, ImVec2(40, 40), true);
+		if (byte[i] == "Blink")
+		{
+			BlinkingText((const char*)byteregistrs[NumberRegistr / 4][i].c_str());
+		}
+		else if (byte[i] == "White")
+		{
+			ImGui::TextColored(ImVec4(red1, green1, blue1, 1), (const char*)byteregistrs[NumberRegistr / 4][i].c_str());
+		}
+		else if (byte[i] == "Red")
+		{
+			ImGui::TextColored(ImVec4(1, 0, 0, 1), (const char*)byteregistrs[NumberRegistr / 4][i].c_str());
+		}
+		else if (byte[i] == "Gray")
+		{
+			ImGui::TextColored(ImVec4(0.5, 0.5, 0.5, 1), (const char*)byteregistrs[NumberRegistr / 4][i].c_str());
+		}
+		ImGui::EndChild();
+		if(i != 3) ImGui::SameLine(0, 0);
+	}
+	return;
+}
 void gui::Render() noexcept
 {
 	ImGui::SetNextWindowPos({ 0, 0 });
@@ -431,117 +459,39 @@ void gui::Render() noexcept
 	{
 		if (chet >= 9 and chet <= 13.5 and NumberCommand == 0)
 		{
-			ImGui::BeginChild("byte1", ImVec2(40, 40), true);
-			BlinkingText((const char*)byteregistrs[NumberRegistr / 4][0].c_str());
-			ImGui::EndChild();
-			ImGui::SameLine(0, 0);
-			ImGui::BeginChild("byte2", ImVec2(40, 40), true);
-			BlinkingText((const char*)byteregistrs[NumberRegistr / 4][1].c_str());
-			ImGui::EndChild();
-			ImGui::SameLine(0, 0);
-			ImGui::BeginChild("byte3", ImVec2(40, 40), true);
-			BlinkingText((const char*)byteregistrs[NumberRegistr / 4][2].c_str());
-			ImGui::EndChild();
-			ImGui::SameLine(0, 0);
-			ImGui::BeginChild("byte4", ImVec2(40, 40), true);
-			BlinkingText((const char*)byteregistrs[NumberRegistr / 4][3].c_str());
-			ImGui::EndChild();
+			string bytes[4] = { "Blink", "Blink", "Blink", "Blink" };
+			ByteText(bytes);
 		}
 		else if (chet >= 4.5 and chet <= 9 and NumberCommand == 1)
 		{
-			ImGui::BeginChild("byte1", ImVec2(40, 40), true);
-			ImGui::TextColored(ImVec4(red1, green1, blue1, 1),(const char*)byteregistrs[NumberRegistr / 4][0].c_str());
-			ImGui::EndChild();
-			ImGui::SameLine(0, 0);
-			ImGui::BeginChild("byte2", ImVec2(40, 40), true);
-			ImGui::TextColored(ImVec4(red1, green1, blue1, 1),(const char*)byteregistrs[NumberRegistr / 4][1].c_str());
-			ImGui::EndChild();
-			ImGui::SameLine(0, 0);
-			ImGui::BeginChild("byte3", ImVec2(40, 40), true);
-			ImGui::TextColored(ImVec4(red1, green1, blue1, 1),(const char*)byteregistrs[NumberRegistr / 4][2].c_str());
-			ImGui::EndChild();
-			ImGui::SameLine(0, 0);
-			ImGui::BeginChild("byte4", ImVec2(40, 40), true);
-			BlinkingText((const char*)byteregistrs[NumberRegistr / 4][3].c_str());
-			ImGui::EndChild();
+			string bytes[4] = { "White", "White", "White", "Blink" };
+			ByteText(bytes);
 		}
 		else if (chet >= 9 and chet <= 13.5 and NumberCommand == 1)
 		{
 			byteregistrs[NumberRegistr / 4][3] = znachbyte1;
-			ImGui::BeginChild("byte1", ImVec2(40, 40), true);
-			ImGui::TextColored(ImVec4(red1, green1, blue1, 1),(const char*)byteregistrs[NumberRegistr / 4][0].c_str());
-			ImGui::EndChild();
-			ImGui::SameLine(0, 0);
-			ImGui::BeginChild("byte2", ImVec2(40, 40), true);
-			ImGui::TextColored(ImVec4(red1, green1, blue1, 1),(const char*)byteregistrs[NumberRegistr / 4][1].c_str());
-			ImGui::EndChild();
-			ImGui::SameLine(0, 0);
-			ImGui::BeginChild("byte3", ImVec2(40, 40), true);
-			BlinkingText((const char*)byteregistrs[NumberRegistr / 4][2].c_str());
-			ImGui::EndChild();
-			ImGui::SameLine(0, 0);
-			ImGui::BeginChild("byte4", ImVec2(40, 40), true);
-			ImGui::TextColored(ImVec4(red1, green1, blue1, 1),(const char*)byteregistrs[NumberRegistr / 4][3].c_str());
-			ImGui::EndChild();
+			string bytes[4] = { "White", "White", "Blink", "White" };
+			ByteText(bytes);
 		}
 		else if (chet >= 13.5 and chet <= 18 and NumberCommand == 1)
 		{
 			byteregistrs[NumberRegistr / 4][2] = znachbyte2;
-			ImGui::BeginChild("byte1", ImVec2(40, 40), true);
-			ImGui::TextColored(ImVec4(red1, green1, blue1, 1),(const char*)byteregistrs[NumberRegistr / 4][0].c_str());
-			ImGui::EndChild();
-			ImGui::SameLine(0, 0);
-			ImGui::BeginChild("byte2", ImVec2(40, 40), true);
-			BlinkingText((const char*)byteregistrs[NumberRegistr / 4][1].c_str());
-			ImGui::EndChild();
-			ImGui::SameLine(0, 0);
-			ImGui::BeginChild("byte3", ImVec2(40, 40), true);
-			ImGui::TextColored(ImVec4(red1, green1, blue1, 1),(const char*)byteregistrs[NumberRegistr / 4][2].c_str());
-			ImGui::EndChild();
-			ImGui::SameLine(0, 0);
-			ImGui::BeginChild("byte4", ImVec2(40, 40), true);
-			ImGui::TextColored(ImVec4(red1, green1, blue1, 1),(const char*)byteregistrs[NumberRegistr / 4][3].c_str());
-			ImGui::EndChild();
+			string bytes[4] = { "White", "Blink", "White", "White" };
+			ByteText(bytes);
 		}
 		else if (chet >= 18 and chet <= 22.5 and NumberCommand == 1)
 		{
 			byteregistrs[NumberRegistr / 4][1] = znachbyte3;
-			ImGui::BeginChild("byte1", ImVec2(40, 40), true);
-			BlinkingText((const char*)byteregistrs[NumberRegistr / 4][0].c_str());
-			ImGui::EndChild();
-			ImGui::SameLine(0, 0);
-			ImGui::BeginChild("byte2", ImVec2(40, 40), true);
-			ImGui::TextColored(ImVec4(red1, green1, blue1, 1),(const char*)byteregistrs[NumberRegistr / 4][1].c_str());
-			ImGui::EndChild();
-			ImGui::SameLine(0, 0);
-			ImGui::BeginChild("byte3", ImVec2(40, 40), true);
-			ImGui::TextColored(ImVec4(red1, green1, blue1, 1),(const char*)byteregistrs[NumberRegistr / 4][2].c_str());
-			ImGui::EndChild();
-			ImGui::SameLine(0, 0);
-			ImGui::BeginChild("byte4", ImVec2(40, 40), true);
-			ImGui::TextColored(ImVec4(red1, green1, blue1, 1),(const char*)byteregistrs[NumberRegistr / 4][3].c_str());
-			ImGui::EndChild();
+			string bytes[4] = { "Blink", "White", "White", "White" };
+			ByteText(bytes);
 		}
 		else if (chet >= 22.5 and NumberCommand == 1) {
 			chet = 0.0f;
 			timer = 0.0f;
 			isBlinking = !isBlinking;
 			byteregistrs[NumberRegistr / 4][0] = znachbyte4;
-			ImGui::BeginChild("byte1", ImVec2(40, 40), true);
-			ImGui::TextColored(ImVec4(red1, green1, blue1, 1),(const char*)byteregistrs[NumberRegistr / 4][0].c_str());
-			ImGui::EndChild();
-			ImGui::SameLine(0, 0);
-			ImGui::BeginChild("byte2", ImVec2(40, 40), true);
-			ImGui::TextColored(ImVec4(red1, green1, blue1, 1),(const char*)byteregistrs[NumberRegistr / 4][1].c_str());
-			ImGui::EndChild();
-			ImGui::SameLine(0, 0);
-			ImGui::BeginChild("byte3", ImVec2(40, 40), true);
-			ImGui::TextColored(ImVec4(red1, green1, blue1, 1),(const char*)byteregistrs[NumberRegistr / 4][2].c_str());
-			ImGui::EndChild();
-			ImGui::SameLine(0, 0);
-			ImGui::BeginChild("byte4", ImVec2(40, 40), true);
-			ImGui::TextColored(ImVec4(red1, green1, blue1, 1),(const char*)byteregistrs[NumberRegistr / 4][3].c_str());
-			ImGui::EndChild();
+			string bytes[4] = { "White", "White", "White", "White" };
+			ByteText(bytes);
 		}
 		else if (chet >= 13.5 and NumberCommand == 0 and NumberElements<=1) {
 			chet = 0.0f;
@@ -551,21 +501,8 @@ void gui::Render() noexcept
 			byteregistrs[NumberRegistr / 4][1] = adresbyte2;
 			byteregistrs[NumberRegistr / 4][2] = adresbyte3;
 			byteregistrs[NumberRegistr / 4][3] = adresbyte4;
-			ImGui::BeginChild("byte1", ImVec2(40, 40), true);
-			ImGui::TextColored(ImVec4(red1, green1, blue1, 1),(const char*)byteregistrs[NumberRegistr / 4][0].c_str());
-			ImGui::EndChild();
-			ImGui::SameLine(0, 0);
-			ImGui::BeginChild("byte2", ImVec2(40, 40), true);
-			ImGui::TextColored(ImVec4(red1, green1, blue1, 1),(const char*)byteregistrs[NumberRegistr / 4][1].c_str());
-			ImGui::EndChild();
-			ImGui::SameLine(0, 0);
-			ImGui::BeginChild("byte3", ImVec2(40, 40), true);
-			ImGui::TextColored(ImVec4(red1, green1, blue1, 1),(const char*)byteregistrs[NumberRegistr / 4][2].c_str());
-			ImGui::EndChild();
-			ImGui::SameLine(0, 0);
-			ImGui::BeginChild("byte4", ImVec2(40, 40), true);
-			ImGui::TextColored(ImVec4(red1, green1, blue1, 1),(const char*)byteregistrs[NumberRegistr / 4][3].c_str());
-			ImGui::EndChild();
+			string bytes[4] = { "White", "White", "White", "White" };
+			ByteText(bytes);
 		}
 		else if (chet >= 13.5 and NumberCommand == 0 and NumberElements>=18 and (NumberElements-2)%4==0) {
 			chet = 0.0f;
@@ -575,75 +512,23 @@ void gui::Render() noexcept
 			byteregistrs[NumberRegistr / 4][1] = byteregistrs[(NumberElements - 18) / 4][1];
 			byteregistrs[NumberRegistr / 4][2] = byteregistrs[(NumberElements - 18) / 4][2];
 			byteregistrs[NumberRegistr / 4][3] = byteregistrs[(NumberElements - 18) / 4][3];
-			ImGui::BeginChild("byte1", ImVec2(40, 40), true);
-			ImGui::TextColored(ImVec4(red1, green1, blue1, 1), (const char*)byteregistrs[NumberRegistr / 4][0].c_str());
-			ImGui::EndChild();
-			ImGui::SameLine(0, 0);
-			ImGui::BeginChild("byte2", ImVec2(40, 40), true);
-			ImGui::TextColored(ImVec4(red1, green1, blue1, 1), (const char*)byteregistrs[NumberRegistr / 4][1].c_str());
-			ImGui::EndChild();
-			ImGui::SameLine(0, 0);
-			ImGui::BeginChild("byte3", ImVec2(40, 40), true);
-			ImGui::TextColored(ImVec4(red1, green1, blue1, 1), (const char*)byteregistrs[NumberRegistr / 4][2].c_str());
-			ImGui::EndChild();
-			ImGui::SameLine(0, 0);
-			ImGui::BeginChild("byte4", ImVec2(40, 40), true);
-			ImGui::TextColored(ImVec4(red1, green1, blue1, 1), (const char*)byteregistrs[NumberRegistr / 4][3].c_str());
-			ImGui::EndChild();
+			string bytes[4] = { "White", "White", "White", "White" };
+			ByteText(bytes);
 			}
 		else if (error == 3 and NumberTypePeremennoi == 1)
 		{
-			ImGui::BeginChild("byte1", ImVec2(40, 40), true);
-			ImGui::TextColored(ImVec4(red1, green1, blue1, 1),(const char*)byteregistrs[NumberRegistr / 4][0].c_str());
-			ImGui::EndChild();
-			ImGui::SameLine(0, 0);
-			ImGui::BeginChild("byte2", ImVec2(40, 40), true);
-			ImGui::TextColored(ImVec4(red1, green1, blue1, 1),(const char*)byteregistrs[NumberRegistr / 4][1].c_str());
-			ImGui::EndChild();
-			ImGui::SameLine(0, 0);
-			ImGui::BeginChild("byte3", ImVec2(40, 40), true);
-			ImGui::TextColored(ImVec4(1,0,0,1),(const char*)byteregistrs[NumberRegistr / 4][2].c_str());
-			ImGui::EndChild();
-			ImGui::SameLine(0, 0);
-			ImGui::BeginChild("byte4", ImVec2(40, 40), true);
-			ImGui::TextColored(ImVec4(1,0,0,1),(const char*)byteregistrs[NumberRegistr / 4][3].c_str());
-			ImGui::EndChild();
+			string bytes[4] = { "White", "White", "Red", "Red" };
+			ByteText(bytes);
 			}
 		else if (error == 3 and NumberTypePeremennoi == 2)
 		{
-			ImGui::BeginChild("byte1", ImVec2(40, 40), true);
-			ImGui::TextColored(ImVec4(red1, green1, blue1, 1),(const char*)byteregistrs[NumberRegistr / 4][0].c_str());
-			ImGui::EndChild();
-			ImGui::SameLine(0, 0);
-			ImGui::BeginChild("byte2", ImVec2(40, 40), true);
-			ImGui::TextColored(ImVec4(red1, green1, blue1, 1),(const char*)byteregistrs[NumberRegistr / 4][1].c_str());
-			ImGui::EndChild();
-			ImGui::SameLine(0, 0);
-			ImGui::BeginChild("byte3", ImVec2(40, 40), true);
-			ImGui::TextColored(ImVec4(1, 1, 1, 1), (const char*)byteregistrs[NumberRegistr / 4][2].c_str());
-			ImGui::EndChild();
-			ImGui::SameLine(0, 0);
-			ImGui::BeginChild("byte4", ImVec2(40, 40), true);
-			ImGui::TextColored(ImVec4(1, 0, 0, 1), (const char*)byteregistrs[NumberRegistr / 4][3].c_str());
-			ImGui::EndChild();
+			string bytes[4] = { "White", "White", "Red", "Red" };
+			ByteText(bytes);
 			}
 		else
 		{
-			ImGui::BeginChild("byte1", ImVec2(40, 40), true);
-			ImGui::TextColored(ImVec4(red1, green1, blue1, 1),(const char*)byteregistrs[NumberRegistr / 4][0].c_str());
-			ImGui::EndChild();
-			ImGui::SameLine(0, 0);
-			ImGui::BeginChild("byte2", ImVec2(40, 40), true);
-			ImGui::TextColored(ImVec4(red1, green1, blue1, 1),(const char*)byteregistrs[NumberRegistr / 4][1].c_str());
-			ImGui::EndChild();
-			ImGui::SameLine(0, 0);
-			ImGui::BeginChild("byte3", ImVec2(40, 40), true);
-			ImGui::TextColored(ImVec4(red1, green1, blue1, 1),(const char*)byteregistrs[NumberRegistr / 4][2].c_str());
-			ImGui::EndChild();
-			ImGui::SameLine(0, 0);
-			ImGui::BeginChild("byte4", ImVec2(40, 40), true);
-			ImGui::TextColored(ImVec4(red1, green1, blue1, 1),(const char*)byteregistrs[NumberRegistr / 4][3].c_str());
-			ImGui::EndChild();
+			string bytes[4] = {"White", "White", "White", "White"};
+			ByteText(bytes);
 		}
 
 	}
@@ -651,58 +536,19 @@ void gui::Render() noexcept
 	{
 		if (chet >= 9 and chet <= 13.5 and NumberCommand == 0)
 		{
-			ImGui::BeginChild("byte1", ImVec2(40, 40), true);
-			ImGui::TextColored(ImVec4(0.5,0.5,0.5,1),(const char*)byteregistrs[NumberRegistr / 4][0].c_str());
-			ImGui::EndChild();
-			ImGui::SameLine(0, 0);
-			ImGui::BeginChild("byte2", ImVec2(40, 40), true);
-			ImGui::TextColored(ImVec4(0.5, 0.5, 0.5, 1), (const char*)byteregistrs[NumberRegistr / 4][1].c_str());
-			ImGui::EndChild();
-			ImGui::SameLine(0, 0);
-			ImGui::BeginChild("byte3", ImVec2(40, 40), true);
-			BlinkingText((const char*)byteregistrs[NumberRegistr / 4][2].c_str());
-			ImGui::EndChild();
-			ImGui::SameLine(0, 0);
-			ImGui::BeginChild("byte4", ImVec2(40, 40), true);
-			BlinkingText((const char*)byteregistrs[NumberRegistr / 4][3].c_str());
-			ImGui::EndChild();
+			string bytes[4] = { "Gray", "Gray", "Blink", "Blink" };
+			ByteText(bytes);
 		}
 		else if (chet >= 4.5 and chet <= 9 and NumberCommand == 1)
 		{
-			ImGui::BeginChild("byte1", ImVec2(40, 40), true);
-			ImGui::TextColored(ImVec4(0.5, 0.5, 0.5, 1), (const char*)byteregistrs[NumberRegistr / 4][0].c_str());
-			ImGui::EndChild();
-			ImGui::SameLine(0, 0);
-			ImGui::BeginChild("byte2", ImVec2(40, 40), true);
-			ImGui::TextColored(ImVec4(0.5, 0.5, 0.5, 1), (const char*)byteregistrs[NumberRegistr / 4][1].c_str());
-			ImGui::EndChild();
-			ImGui::SameLine(0, 0);
-			ImGui::BeginChild("byte3", ImVec2(40, 40), true);
-			ImGui::TextColored(ImVec4(red1, green1, blue1, 1),(const char*)byteregistrs[NumberRegistr / 4][2].c_str());
-			ImGui::EndChild();
-			ImGui::SameLine(0, 0);
-			ImGui::BeginChild("byte4", ImVec2(40, 40), true);
-			BlinkingText((const char*)byteregistrs[NumberRegistr / 4][3].c_str());
-			ImGui::EndChild();
+			string bytes[4] = { "Gray", "Gray", "White", "Blink" };
+			ByteText(bytes);
 		}
 		else if (chet >= 9 and chet <= 13.5 and NumberCommand == 1)
 		{
 			byteregistrs[NumberRegistr / 4][3] = znachbyte1;
-			ImGui::BeginChild("byte1", ImVec2(40, 40), true);
-			ImGui::TextColored(ImVec4(0.5, 0.5, 0.5, 1), (const char*)byteregistrs[NumberRegistr / 4][0].c_str());
-			ImGui::EndChild();
-			ImGui::SameLine(0, 0);
-			ImGui::BeginChild("byte2", ImVec2(40, 40), true);
-			ImGui::TextColored(ImVec4(0.5, 0.5, 0.5, 1), (const char*)byteregistrs[NumberRegistr / 4][0].c_str());
-			ImGui::EndChild();
-			ImGui::SameLine(0, 0);
-			ImGui::BeginChild("byte3", ImVec2(40, 40), true);
-			BlinkingText((const char*)byteregistrs[NumberRegistr / 4][2].c_str());
-			ImGui::EndChild();
-			ImGui::SameLine(0, 0);
-			ImGui::BeginChild("byte4", ImVec2(40, 40), true);
-			ImGui::TextColored(ImVec4(red1, green1, blue1, 1),(const char*)byteregistrs[NumberRegistr / 4][3].c_str());
-			ImGui::EndChild();
+			string bytes[4] = { "Gray", "Gray", "Blink", "White" };
+			ByteText(bytes);
 		}
 		else if (chet >= 13.5 and NumberCommand == 1) {
 			chet = 0.0f;
@@ -710,20 +556,8 @@ void gui::Render() noexcept
 			isBlinking = !isBlinking;
 			byteregistrs[NumberRegistr / 4][2] = znachbyte2;
 			ImGui::BeginChild("byte1", ImVec2(40, 40), true);
-			ImGui::TextColored(ImVec4(0.5, 0.5, 0.5, 1), (const char*)byteregistrs[NumberRegistr / 4][0].c_str());
-			ImGui::EndChild();
-			ImGui::SameLine(0, 0);
-			ImGui::BeginChild("byte2", ImVec2(40, 40), true);
-			ImGui::TextColored(ImVec4(0.5, 0.5, 0.5, 1), (const char*)byteregistrs[NumberRegistr / 4][1].c_str());
-			ImGui::EndChild();
-			ImGui::SameLine(0, 0);
-			ImGui::BeginChild("byte3", ImVec2(40, 40), true);
-			ImGui::TextColored(ImVec4(red1, green1, blue1, 1),(const char*)byteregistrs[NumberRegistr / 4][2].c_str());
-			ImGui::EndChild();
-			ImGui::SameLine(0, 0);
-			ImGui::BeginChild("byte4", ImVec2(40, 40), true);
-			ImGui::TextColored(ImVec4(red1, green1, blue1, 1),(const char*)byteregistrs[NumberRegistr / 4][3].c_str());
-			ImGui::EndChild();
+			string bytes[4] = { "Gray", "Gray", "White", "White" };
+			ByteText(bytes);
 		}
 		else if (chet >= 13.5 and NumberCommand == 0) {
 			chet = 0.0f;
@@ -731,75 +565,23 @@ void gui::Render() noexcept
 			isBlinking = !isBlinking;
 			byteregistrs[NumberRegistr / 4][2] = adresbyte3;
 			byteregistrs[NumberRegistr / 4][3] = adresbyte4;
-			ImGui::BeginChild("byte1", ImVec2(40, 40), true);
-			ImGui::TextColored(ImVec4(0.5, 0.5, 0.5, 1), (const char*)byteregistrs[NumberRegistr / 4][0].c_str());
-			ImGui::EndChild();
-			ImGui::SameLine(0, 0);
-			ImGui::BeginChild("byte2", ImVec2(40, 40), true);
-			ImGui::TextColored(ImVec4(0.5, 0.5, 0.5, 1), (const char*)byteregistrs[NumberRegistr / 4][1].c_str());
-			ImGui::EndChild();
-			ImGui::SameLine(0, 0);
-			ImGui::BeginChild("byte3", ImVec2(40, 40), true);
-			ImGui::TextColored(ImVec4(red1, green1, blue1, 1),(const char*)byteregistrs[NumberRegistr / 4][2].c_str());
-			ImGui::EndChild();
-			ImGui::SameLine(0, 0);
-			ImGui::BeginChild("byte4", ImVec2(40, 40), true);
-			ImGui::TextColored(ImVec4(red1, green1, blue1, 1),(const char*)byteregistrs[NumberRegistr / 4][3].c_str());
-			ImGui::EndChild();
+			string bytes[4] = { "Gray", "Gray", "White", "White" };
+			ByteText(bytes);
 		}
 		else if (error == 4 and NumberTypePeremennoi == 0)
 		{
-			ImGui::BeginChild("byte1", ImVec2(40, 40), true);
-			ImGui::TextColored(ImVec4(1, 0, 0, 1), (const char*)byteregistrs[NumberRegistr / 4][0].c_str());
-			ImGui::EndChild();
-			ImGui::SameLine(0, 0);
-			ImGui::BeginChild("byte2", ImVec2(40, 40), true);
-			ImGui::TextColored(ImVec4(1, 0, 0, 1), (const char*)byteregistrs[NumberRegistr / 4][1].c_str());
-			ImGui::EndChild();
-			ImGui::SameLine(0, 0);
-			ImGui::BeginChild("byte3", ImVec2(40, 40), true);
-			ImGui::TextColored(ImVec4(1, 0, 0, 1), (const char*)byteregistrs[NumberRegistr / 4][2].c_str());
-			ImGui::EndChild();
-			ImGui::SameLine(0, 0);
-			ImGui::BeginChild("byte4", ImVec2(40, 40), true);
-			ImGui::TextColored(ImVec4(1, 0, 0, 1), (const char*)byteregistrs[NumberRegistr / 4][3].c_str());
-			ImGui::EndChild();
+			string bytes[4] = { "Red", "Red", "Red", "Red" };
+			ByteText(bytes);
 		}
 		else if (error == 3 and NumberTypePeremennoi == 2)
 		{
-			ImGui::BeginChild("byte1", ImVec2(40, 40), true);
-			ImGui::TextColored(ImVec4(0.5, 0.5, 0.5, 1), (const char*)byteregistrs[NumberRegistr / 4][0].c_str());
-			ImGui::EndChild();
-			ImGui::SameLine(0, 0);
-			ImGui::BeginChild("byte2", ImVec2(40, 40), true);
-			ImGui::TextColored(ImVec4(0.5, 0.5, 0.5, 1), (const char*)byteregistrs[NumberRegistr / 4][1].c_str());
-			ImGui::EndChild();
-			ImGui::SameLine(0, 0);
-			ImGui::BeginChild("byte3", ImVec2(40, 40), true);
-			ImGui::TextColored(ImVec4(1, 1, 1, 1), (const char*)byteregistrs[NumberRegistr / 4][2].c_str());
-			ImGui::EndChild();
-			ImGui::SameLine(0, 0);
-			ImGui::BeginChild("byte4", ImVec2(40, 40), true);
-			ImGui::TextColored(ImVec4(1, 0, 0, 1), (const char*)byteregistrs[NumberRegistr / 4][3].c_str());
-			ImGui::EndChild();
+			string bytes[4] = { "Gray", "Gray", "White", "Red" };
+			ByteText(bytes);
 		}
 		else
 		{
-			ImGui::BeginChild("byte1", ImVec2(40, 40), true);
-			ImGui::TextColored(ImVec4(0.5, 0.5, 0.5, 1), (const char*)byteregistrs[NumberRegistr / 4][0].c_str());
-			ImGui::EndChild();
-			ImGui::SameLine(0, 0);
-			ImGui::BeginChild("byte2", ImVec2(40, 40), true);
-			ImGui::TextColored(ImVec4(0.5, 0.5, 0.5, 1), (const char*)byteregistrs[NumberRegistr / 4][1].c_str());
-			ImGui::EndChild();
-			ImGui::SameLine(0, 0);
-			ImGui::BeginChild("byte3", ImVec2(40, 40), true);
-			ImGui::TextColored(ImVec4(red1, green1, blue1, 1),(const char*)byteregistrs[NumberRegistr / 4][2].c_str());
-			ImGui::EndChild();
-			ImGui::SameLine(0, 0);
-			ImGui::BeginChild("byte4", ImVec2(40, 40), true);
-			ImGui::TextColored(ImVec4(red1, green1, blue1, 1),(const char*)byteregistrs[NumberRegistr / 4][3].c_str());
-			ImGui::EndChild();
+			string bytes[4] = { "Gray", "Gray", "White", "White" };
+			ByteText(bytes);
 		}
 	}
 	else if (NumberRegistr % 4 == 2)
@@ -807,229 +589,72 @@ void gui::Render() noexcept
 			if (NumberCommand == 0 and error == 1)
 			{
 
-				ImGui::BeginChild("byte1", ImVec2(40, 40), true);
-				ImGui::TextColored(ImVec4(1, 0, 0, 1), (const char*)byteregistrs[NumberRegistr / 4][0].c_str());
-				ImGui::EndChild();
-				ImGui::SameLine(0, 0);
-				ImGui::BeginChild("byte2", ImVec2(40, 40), true);
-				ImGui::TextColored(ImVec4(1, 0, 0, 1), (const char*)byteregistrs[NumberRegistr / 4][1].c_str());
-				ImGui::EndChild();
-				ImGui::SameLine(0, 0);
-				ImGui::BeginChild("byte3", ImVec2(40, 40), true);
-				ImGui::TextColored(ImVec4(1, 0, 0, 1), (const char*)byteregistrs[NumberRegistr / 4][2].c_str());
-				ImGui::EndChild();
-				ImGui::SameLine(0, 0);
-				ImGui::BeginChild("byte4", ImVec2(40, 40), true);
-				ImGui::TextColored(ImVec4(1, 0, 0, 1), (const char*)byteregistrs[NumberRegistr / 4][3].c_str());
-				ImGui::EndChild();
+				string bytes[4] = { "Red", "Red", "Red", "Red" };
+				ByteText(bytes);
 			}
 			else if (chet >= 4.5 and chet <= 9 and NumberCommand == 1)
 			{
-				ImGui::BeginChild("byte1", ImVec2(40, 40), true);
-				ImGui::TextColored(ImVec4(0.5, 0.5, 0.5, 1), (const char*)byteregistrs[NumberRegistr / 4][0].c_str());
-				ImGui::EndChild();
-				ImGui::SameLine(0, 0);
-				ImGui::BeginChild("byte2", ImVec2(40, 40), true);
-				ImGui::TextColored(ImVec4(0.5, 0.5, 0.5, 1), (const char*)byteregistrs[NumberRegistr / 4][1].c_str());
-				ImGui::EndChild();
-				ImGui::SameLine(0, 0);
-				ImGui::BeginChild("byte3", ImVec2(40, 40), true);
-				BlinkingText((const char*)byteregistrs[NumberRegistr / 4][2].c_str());
-				ImGui::EndChild();
-				ImGui::SameLine(0, 0);
-				ImGui::BeginChild("byte4", ImVec2(40, 40), true);
-				ImGui::TextColored(ImVec4(0.5, 0.5, 0.5, 1), (const char*)byteregistrs[NumberRegistr / 4][3].c_str());
-				ImGui::EndChild();
+				string bytes[4] = { "Gray", "Gray", "Blink", "Gray" };
+				ByteText(bytes);
 			}
 			else if (chet >= 9 and NumberCommand == 1) {
 				chet = 0.0f;
 				timer = 0.0f;
 				isBlinking = !isBlinking;
 				byteregistrs[NumberRegistr / 4][2] = znachbyte1;
-				ImGui::BeginChild("byte1", ImVec2(40, 40), true);
-				ImGui::TextColored(ImVec4(0.5, 0.5, 0.5, 1), (const char*)byteregistrs[NumberRegistr / 4][0].c_str());
-				ImGui::EndChild();
-				ImGui::SameLine(0, 0);
-				ImGui::BeginChild("byte2", ImVec2(40, 40), true);
-				ImGui::TextColored(ImVec4(0.5, 0.5, 0.5, 1), (const char*)byteregistrs[NumberRegistr / 4][1].c_str());
-				ImGui::EndChild();
-				ImGui::SameLine(0, 0);
-				ImGui::BeginChild("byte3", ImVec2(40, 40), true);
-				ImGui::TextColored(ImVec4(red1, green1, blue1, 1),(const char*)byteregistrs[NumberRegistr / 4][2].c_str());
-				ImGui::EndChild();
-				ImGui::SameLine(0, 0);
-				ImGui::BeginChild("byte4", ImVec2(40, 40), true);
-				ImGui::TextColored(ImVec4(0.5, 0.5, 0.5, 1), (const char*)byteregistrs[NumberRegistr / 4][3].c_str());
-				ImGui::EndChild();
+				string bytes[4] = { "Gray", "Gray", "White", "Gray" };
+				ByteText(bytes);
 			}
 			else if (error == 4 and NumberTypePeremennoi == 0)
 			{
-				ImGui::BeginChild("byte1", ImVec2(40, 40), true);
-				ImGui::TextColored(ImVec4(1, 0, 0, 1), (const char*)byteregistrs[NumberRegistr / 4][0].c_str());
-				ImGui::EndChild();
-				ImGui::SameLine(0, 0);
-				ImGui::BeginChild("byte2", ImVec2(40, 40), true);
-				ImGui::TextColored(ImVec4(1, 0, 0, 1), (const char*)byteregistrs[NumberRegistr / 4][1].c_str());
-				ImGui::EndChild();
-				ImGui::SameLine(0, 0);
-				ImGui::BeginChild("byte3", ImVec2(40, 40), true);
-				ImGui::TextColored(ImVec4(1, 0, 0, 1), (const char*)byteregistrs[NumberRegistr / 4][2].c_str());
-				ImGui::EndChild();
-				ImGui::SameLine(0, 0);
-				ImGui::BeginChild("byte4", ImVec2(40, 40), true);
-				ImGui::TextColored(ImVec4(1, 0, 0, 1), (const char*)byteregistrs[NumberRegistr / 4][3].c_str());
-				ImGui::EndChild();
+				string bytes[4] = { "Red", "Red", "Red", "Red" };
+				ByteText(bytes);
 			}
 			else if (error == 4 and NumberTypePeremennoi == 1)
 			{
-				ImGui::BeginChild("byte1", ImVec2(40, 40), true);
-				ImGui::TextColored(ImVec4(0.5, 0.5, 0.5, 1), (const char*)byteregistrs[NumberRegistr / 4][0].c_str());
-				ImGui::EndChild();
-				ImGui::SameLine(0, 0);
-				ImGui::BeginChild("byte2", ImVec2(40, 40), true);
-				ImGui::TextColored(ImVec4(0.5, 0.5, 0.5, 1), (const char*)byteregistrs[NumberRegistr / 4][1].c_str());
-				ImGui::EndChild();
-				ImGui::SameLine(0, 0);
-				ImGui::BeginChild("byte3", ImVec2(40, 40), true);
-				ImGui::TextColored(ImVec4(1, 0, 0, 1), (const char*)byteregistrs[NumberRegistr / 4][2].c_str());
-				ImGui::EndChild();
-				ImGui::SameLine(0, 0);
-				ImGui::BeginChild("byte4", ImVec2(40, 40), true);
-				ImGui::TextColored(ImVec4(1, 0, 0, 1), (const char*)byteregistrs[NumberRegistr / 4][3].c_str());
-				ImGui::EndChild();
+				string bytes[4] = { "Gray", "Gray", "Red", "Red" };
+				ByteText(bytes);
 			}
 			else
 			{
-				ImGui::BeginChild("byte1", ImVec2(40, 40), true);
-				ImGui::TextColored(ImVec4(0.5, 0.5, 0.5, 1), (const char*)byteregistrs[NumberRegistr / 4][0].c_str());
-				ImGui::EndChild();
-				ImGui::SameLine(0, 0);
-				ImGui::BeginChild("byte2", ImVec2(40, 40), true);
-				ImGui::TextColored(ImVec4(0.5, 0.5, 0.5, 1), (const char*)byteregistrs[NumberRegistr / 4][1].c_str());
-				ImGui::EndChild();
-				ImGui::SameLine(0, 0);
-				ImGui::BeginChild("byte3", ImVec2(40, 40), true);
-				ImGui::TextColored(ImVec4(red1, green1, blue1, 1),(const char*)byteregistrs[NumberRegistr / 4][2].c_str());
-				ImGui::EndChild();
-				ImGui::SameLine(0, 0);
-				ImGui::BeginChild("byte4", ImVec2(40, 40), true);
-				ImGui::TextColored(ImVec4(0.5, 0.5, 0.5, 1), (const char*)byteregistrs[NumberRegistr / 4][3].c_str());
-				ImGui::EndChild();
+				string bytes[4] = { "Gray", "Gray", "White", "Gray" };
+				ByteText(bytes);
 			}
 		}
 		else if (NumberRegistr % 4 == 3)
 		{
 			if (NumberCommand == 0 and error==1)
 			{
-
-				ImGui::BeginChild("byte1", ImVec2(40, 40), true);
-				ImGui::TextColored(ImVec4(1, 0, 0, 1), (const char*)byteregistrs[NumberRegistr / 4][0].c_str());
-				ImGui::EndChild();
-				ImGui::SameLine(0, 0);
-				ImGui::BeginChild("byte2", ImVec2(40, 40), true);
-				ImGui::TextColored(ImVec4(1, 0, 0, 1), (const char*)byteregistrs[NumberRegistr / 4][1].c_str());
-				ImGui::EndChild();
-				ImGui::SameLine(0, 0);
-				ImGui::BeginChild("byte3", ImVec2(40, 40), true);
-				ImGui::TextColored(ImVec4(1, 0, 0, 1), (const char*)byteregistrs[NumberRegistr / 4][2].c_str());
-				ImGui::EndChild();
-				ImGui::SameLine(0, 0);
-				ImGui::BeginChild("byte4", ImVec2(40, 40), true);
-				ImGui::TextColored(ImVec4(1, 0, 0, 1), (const char*)byteregistrs[NumberRegistr / 4][3].c_str());
-				ImGui::EndChild();
+				string bytes[4] = { "Red", "Red", "Red", "Red" };
+				ByteText(bytes);
 			}
 			else if (chet >= 4.5 and chet <= 9 and NumberCommand == 1)
 			{
-				ImGui::BeginChild("byte1", ImVec2(40, 40), true);
-				ImGui::TextColored(ImVec4(0.5, 0.5, 0.5, 1), (const char*)byteregistrs[NumberRegistr / 4][0].c_str());
-				ImGui::EndChild();
-				ImGui::SameLine(0, 0);
-				ImGui::BeginChild("byte2", ImVec2(40, 40), true);
-				ImGui::TextColored(ImVec4(0.5, 0.5, 0.5, 1), (const char*)byteregistrs[NumberRegistr / 4][1].c_str());
-				ImGui::EndChild();
-				ImGui::SameLine(0, 0);
-				ImGui::BeginChild("byte3", ImVec2(40, 40), true);
-				ImGui::TextColored(ImVec4(0.5, 0.5, 0.5, 1), (const char*)byteregistrs[NumberRegistr / 4][2].c_str());
-				ImGui::EndChild();
-				ImGui::SameLine(0, 0);
-				ImGui::BeginChild("byte4", ImVec2(40, 40), true);
-				BlinkingText((const char*)byteregistrs[NumberRegistr / 4][3].c_str());
-				ImGui::EndChild();
+				string bytes[4] = { "Gray", "Gray", "Gray", "Blink" };
+				ByteText(bytes);
 			}
 			else if (chet >= 9 and NumberCommand == 1) {
 				chet = 0.0f;
 				timer = 0.0f;
 				isBlinking = !isBlinking;
 				byteregistrs[NumberRegistr / 4][3] = znachbyte1;
-				ImGui::BeginChild("byte1", ImVec2(40, 40), true);
-				ImGui::TextColored(ImVec4(0.5, 0.5, 0.5, 1), (const char*)byteregistrs[NumberRegistr / 4][0].c_str());
-				ImGui::EndChild();
-				ImGui::SameLine(0, 0);
-				ImGui::BeginChild("byte2", ImVec2(40, 40), true);
-				ImGui::TextColored(ImVec4(0.5, 0.5, 0.5, 1), (const char*)byteregistrs[NumberRegistr / 4][1].c_str());
-				ImGui::EndChild();
-				ImGui::SameLine(0, 0);
-				ImGui::BeginChild("byte3", ImVec2(40, 40), true);
-				ImGui::TextColored(ImVec4(0.5, 0.5, 0.5, 1), (const char*)byteregistrs[NumberRegistr / 4][2].c_str());
-				ImGui::EndChild();
-				ImGui::SameLine(0, 0);
-				ImGui::BeginChild("byte4", ImVec2(40, 40), true);
-				ImGui::TextColored(ImVec4(red1, green1, blue1, 1), (const char*)byteregistrs[NumberRegistr / 4][3].c_str());
-				ImGui::EndChild();
+				string bytes[4] = { "Gray", "Gray", "Gray", "White" };
+				ByteText(bytes);
 			}
 			else if (error == 4 and NumberTypePeremennoi == 0)
 			{
-				ImGui::BeginChild("byte1", ImVec2(40, 40), true);
-				ImGui::TextColored(ImVec4(1, 0, 0, 1), (const char*)byteregistrs[NumberRegistr / 4][0].c_str());
-				ImGui::EndChild();
-				ImGui::SameLine(0, 0);
-				ImGui::BeginChild("byte2", ImVec2(40, 40), true);
-				ImGui::TextColored(ImVec4(1, 0, 0, 1), (const char*)byteregistrs[NumberRegistr / 4][1].c_str());
-				ImGui::EndChild();
-				ImGui::SameLine(0, 0);
-				ImGui::BeginChild("byte3", ImVec2(40, 40), true);
-				ImGui::TextColored(ImVec4(1, 0, 0, 1), (const char*)byteregistrs[NumberRegistr / 4][2].c_str());
-				ImGui::EndChild();
-				ImGui::SameLine(0, 0);
-				ImGui::BeginChild("byte4", ImVec2(40, 40), true);
-				ImGui::TextColored(ImVec4(1, 0, 0, 1), (const char*)byteregistrs[NumberRegistr / 4][3].c_str());
-				ImGui::EndChild();
+				string bytes[4] = { "Red", "Red", "Red", "Red" };
+				ByteText(bytes);
 			}
 			else if (error == 4 and NumberTypePeremennoi == 1)
 			{
-				ImGui::BeginChild("byte1", ImVec2(40, 40), true);
-				ImGui::TextColored(ImVec4(0.5, 0.5, 0.5, 1), (const char*)byteregistrs[NumberRegistr / 4][0].c_str());
-				ImGui::EndChild();
-				ImGui::SameLine(0, 0);
-				ImGui::BeginChild("byte2", ImVec2(40, 40), true);
-				ImGui::TextColored(ImVec4(0.5, 0.5, 0.5, 1), (const char*)byteregistrs[NumberRegistr / 4][1].c_str());
-				ImGui::EndChild();
-				ImGui::SameLine(0, 0);
-				ImGui::BeginChild("byte3", ImVec2(40, 40), true);
-				ImGui::TextColored(ImVec4(1, 0, 0, 1), (const char*)byteregistrs[NumberRegistr / 4][2].c_str());
-				ImGui::EndChild();
-				ImGui::SameLine(0, 0);
-				ImGui::BeginChild("byte4", ImVec2(40, 40), true);
-				ImGui::TextColored(ImVec4(1, 0, 0, 1), (const char*)byteregistrs[NumberRegistr / 4][3].c_str());
-				ImGui::EndChild();
+				string bytes[4] = { "Gray", "Gray", "Red", "Red" };
+				ByteText(bytes);
 			}
 			else
 			{
-				ImGui::BeginChild("byte1", ImVec2(40, 40), true);
-				ImGui::TextColored(ImVec4(0.5, 0.5, 0.5, 1), (const char*)byteregistrs[NumberRegistr / 4][0].c_str());
-				ImGui::EndChild();
-				ImGui::SameLine(0, 0);
-				ImGui::BeginChild("byte2", ImVec2(40, 40), true);
-				ImGui::TextColored(ImVec4(0.5, 0.5, 0.5, 1), (const char*)byteregistrs[NumberRegistr / 4][1].c_str());
-				ImGui::EndChild();
-				ImGui::SameLine(0, 0);
-				ImGui::BeginChild("byte3", ImVec2(40, 40), true);
-				ImGui::TextColored(ImVec4(0.5, 0.5, 0.5, 1), (const char*)byteregistrs[NumberRegistr / 4][2].c_str());
-				ImGui::EndChild();
-				ImGui::SameLine(0, 0);
-				ImGui::BeginChild("byte4", ImVec2(40, 40), true);
-				ImGui::TextColored(ImVec4(red1, green1, blue1, 1), (const char*)byteregistrs[NumberRegistr / 4][3].c_str());
-				ImGui::EndChild();
+				string bytes[4] = { "Gray", "Gray", "Gray", "White" };
+				ByteText(bytes);
 			}
 		}
 	ImGui::SetNextItemWidth(ImGui::GetWindowWidth() * 0.15f);
