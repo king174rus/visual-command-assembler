@@ -1,267 +1,56 @@
-#include "gui.h"
+// Dear ImGui: standalone example application for GLFW + OpenGL 3, using programmable pipeline
+// (GLFW is a cross-platform general purpose library for handling windows, inputs, OpenGL/Vulkan/Metal graphics context creation, etc.)
 
-#include "../imgui/imgui.h"
-#include "../imgui/imgui_impl_dx9.h"
-#include "../imgui/imgui_impl_win32.h"
+// Learn about Dear ImGui:
+// - FAQ                  https://dearimgui.com/faq
+// - Getting Started      https://dearimgui.com/getting-started
+// - Documentation        https://dearimgui.com/docs (same as your local docs/ folder).
+// - Introduction, links and more at the top of imgui.cpp
 
+#include "imgui.h"
+#include "imgui_impl_glfw.h"
+#include "imgui_impl_opengl3.h"
 #include <iostream>
-#include "string"
+#include <string>
 #include <chrono>
-#include <algorithm> // для std::transform
-#include <cctype>    // для std::toupper
-
+#include <algorithm> //  std::transform
+#include <cctype>    // std::toupper
+#include <sstream>
+#include <cstddef>
+#include <vector>
+#include <iterator>
+#include <cstdlib>
+#pragma execution_character_set("utf-8")
 using namespace std::chrono;
 using namespace std;
 
-extern IMGUI_IMPL_API LRESULT ImGui_ImplWin32_WndProcHandler(
-	HWND window,
-	UINT message,
-	WPARAM wideParameter,
-	LPARAM longParameter
-);
+#include <stdio.h>
+#define GL_SILENCE_DEPRECATION
+#if defined(IMGUI_IMPL_OPENGL_ES2)
+#include <GLES2/gl2.h>
+#endif
+#include <GLFW/glfw3.h> // Will drag system OpenGL headers
 
-long __stdcall WindowProcess(
-	HWND window,
-	UINT message,
-	WPARAM wideParameter,
-	LPARAM longParameter)
+// [Win32] Our example includes a copy of glfw3.lib pre-compiled with VS2010 to maximize ease of testing and compatibility with old VS compilers.
+// To link with VS2010-era libraries, VS2015+ requires linking with legacy_stdio_definitions.lib, which we do using this pragma.
+// Your own project should not be affected, as you are likely to link with a newer binary of GLFW that is adequate for your version of Visual Studio.
+#if defined(_MSC_VER) && (_MSC_VER >= 1900) && !defined(IMGUI_DISABLE_WIN32_FUNCTIONS)
+#pragma comment(lib, "legacy_stdio_definitions")
+#endif
+
+// This example can also compile and run with Emscripten! See 'Makefile.emscripten' for details.
+#ifdef __EMSCRIPTEN__
+#include "../libs/emscripten/emscripten_mainloop_stub.h"
+#endif
+
+static void glfw_error_callback(int error, const char* description)
 {
-	if (ImGui_ImplWin32_WndProcHandler(window, message, wideParameter, longParameter))
-		return true;
-
-	switch (message)
-	{
-	case WM_SIZE: {
-		if (gui::device && wideParameter != SIZE_MINIMIZED)
-		{
-			gui::presentParameters.BackBufferWidth = LOWORD(longParameter);
-			gui::presentParameters.BackBufferHeight = HIWORD(longParameter);
-			gui::ResetDevice();
-		}
-	}return 0;
-
-	case WM_SYSCOMMAND: {
-		if ((wideParameter & 0xfff0) == SC_KEYMENU) // Disable ALT application menu
-			return 0;
-	}break;
-
-	case WM_DESTROY: {
-		PostQuitMessage(0);
-	}return 0;
-
-	case WM_LBUTTONDOWN: {
-		gui::position = MAKEPOINTS(longParameter); // set click points
-	}return 0;
-	/**	case WM_ERASEBKGND:
-	{
-		HDC hdc = (HDC)wideParameter;
-
-		// Задайте цвет фона
-		HBRUSH hBrush = CreateSolidBrush(RGB(255, 0, 0)); // Красный цвет фона
-
-		RECT rect;
-		GetClientRect(window, &rect);
-		FillRect(hdc, &rect, hBrush);
-
-		DeleteObject(hBrush);
-
-		return 1;
-	}
-	break;	**/
-	case WM_MOUSEMOVE: {
-		if (wideParameter == MK_LBUTTON)
-		{
-			const auto points = MAKEPOINTS(longParameter);
-			auto rect = ::RECT{ };
-
-			GetWindowRect(gui::window, &rect);
-
-			rect.left += points.x - gui::position.x;
-			rect.top += points.y - gui::position.y;
-
-			if (gui::position.x >= 0 &&
-				gui::position.x <= gui::WIDTH &&
-				gui::position.y >= 0 && gui::position.y <= 19)
-				SetWindowPos(
-					gui::window,
-					HWND_TOPMOST,
-					rect.left,
-					rect.top,
-					0, 0,
-					SWP_SHOWWINDOW | SWP_NOSIZE | SWP_NOZORDER
-				);
-		}
-
-	}return 0;
-
-	}
-
-	return DefWindowProc(window, message, wideParameter, longParameter);
+    fprintf(stderr, "GLFW Error %d: %s\n", error, description);
 }
 
-void gui::CreateHWindow(const char* windowName) noexcept
-{
-	windowClass.cbSize = sizeof(WNDCLASSEX);
-	windowClass.style = CS_CLASSDC;
-	windowClass.lpfnWndProc = WindowProcess;
-	windowClass.cbClsExtra = 0;
-	windowClass.cbWndExtra = 0;
-	windowClass.hInstance = GetModuleHandleA(0);
-	windowClass.hIcon = 0;
-	windowClass.hCursor = 0;
-	windowClass.hbrBackground = 0;
-	windowClass.lpszMenuName = 0;
-	windowClass.lpszClassName = "class001";
-	windowClass.hIconSm = 0;
 
-	RegisterClassEx(&windowClass);
-
-	window = CreateWindowEx(
-		0,
-		"class001",
-		windowName,
-		WS_POPUP,
-		100,
-		100,
-		WIDTH,
-		HEIGHT,
-		0,
-		0,
-		windowClass.hInstance,
-		0
-	);
-
-	ShowWindow(window, SW_SHOWDEFAULT);
-	UpdateWindow(window);
-}
-
-void gui::DestroyHWindow() noexcept
-{
-	DestroyWindow(window);
-	UnregisterClass(windowClass.lpszClassName, windowClass.hInstance);
-}
-
-bool gui::CreateDevice() noexcept
-{
-	d3d = Direct3DCreate9(D3D_SDK_VERSION);
-
-	if (!d3d)
-		return false;
-
-	ZeroMemory(&presentParameters, sizeof(presentParameters));
-
-	presentParameters.Windowed = TRUE;
-	presentParameters.SwapEffect = D3DSWAPEFFECT_DISCARD;
-	presentParameters.BackBufferFormat = D3DFMT_UNKNOWN;
-	presentParameters.EnableAutoDepthStencil = TRUE;
-	presentParameters.AutoDepthStencilFormat = D3DFMT_D16;
-	presentParameters.PresentationInterval = D3DPRESENT_INTERVAL_ONE;
-
-	if (d3d->CreateDevice(
-		D3DADAPTER_DEFAULT,
-		D3DDEVTYPE_HAL,
-		window,
-		D3DCREATE_HARDWARE_VERTEXPROCESSING,
-		&presentParameters,
-		&device) < 0)
-		return false;
-
-	return true;
-}
-
-void gui::ResetDevice() noexcept
-{
-	ImGui_ImplDX9_InvalidateDeviceObjects();
-
-	const auto result = device->Reset(&presentParameters);
-
-	if (result == D3DERR_INVALIDCALL)
-		IM_ASSERT(0);
-
-	ImGui_ImplDX9_CreateDeviceObjects();
-}
-
-void gui::DestroyDevice() noexcept
-{
-	if (device)
-	{
-		device->Release();
-		device = nullptr;
-	}
-
-	if (d3d)
-	{
-		d3d->Release();
-		d3d = nullptr;
-	}
-}
-
-void gui::CreateImGui() noexcept
-{
-	IMGUI_CHECKVERSION();
-	ImGui::CreateContext();
-	ImGuiIO& io = ImGui::GetIO();
-	ImGui::GetIO().Fonts->AddFontFromFileTTF("C:\\Windows\\Fonts\\Arial.ttf", 16.5f, NULL, ImGui::GetIO().Fonts->GetGlyphRangesCyrillic());
-	io.IniFilename = NULL;
-
-	ImGui::StyleColorsDark();
-
-	ImGui_ImplWin32_Init(window);
-	ImGui_ImplDX9_Init(device);
-}
-
-void gui::DestroyImGui() noexcept
-{
-	ImGui_ImplDX9_Shutdown();
-	ImGui_ImplWin32_Shutdown();
-	ImGui::DestroyContext();
-}
-
-void gui::BeginRender() noexcept
-{
-	MSG message;
-	while (PeekMessage(&message, 0, 0, 0, PM_REMOVE))
-	{
-		TranslateMessage(&message);
-		DispatchMessage(&message);
-
-		if (message.message == WM_QUIT)
-		{
-			isRunning = !isRunning;
-			return;
-		}
-	}
-
-	// Start the Dear ImGui frame
-	ImGui_ImplDX9_NewFrame();
-	ImGui_ImplWin32_NewFrame();
-	ImGui::NewFrame();
-}
-
-void gui::EndRender() noexcept
-{
-	ImGui::EndFrame();
-
-	device->SetRenderState(D3DRS_ZENABLE, FALSE);
-	device->SetRenderState(D3DRS_ALPHABLENDENABLE, FALSE);
-	device->SetRenderState(D3DRS_SCISSORTESTENABLE, FALSE);
-
-	device->Clear(0, 0, D3DCLEAR_TARGET | D3DCLEAR_ZBUFFER, D3DCOLOR_RGBA(0, 0, 0, 255), 1.0f, 0);
-
-	if (device->BeginScene() >= 0)
-	{
-		ImGui::Render();
-		ImGui_ImplDX9_RenderDrawData(ImGui::GetDrawData());
-		device->EndScene();
-	}
-
-	const auto result = device->Present(0, 0, 0, 0);
-
-	// Handle loss of D3D9 device
-	if (result == D3DERR_DEVICELOST && device->TestCooperativeLevel() == D3DERR_DEVICENOTRESET)
-		ResetDevice();
-}
-
+        // Start the Dear ImGui frame
+       bool isRunning = true;
 auto start = high_resolution_clock::now();
 
 char buf[255];
@@ -349,7 +138,7 @@ void ByteText(string byte[4])
 	ImGuiID id;
 	for (int i = 0; i < 4; i++)
 	{
-		id = i;
+		id = i+1;
 		ImGui::BeginChild(id, ImVec2(40, 40), true);
 		if (byte[i] == "Blink")
 		{
@@ -372,29 +161,140 @@ void ByteText(string byte[4])
 	}
 	return;
 }
-void gui::Render() noexcept
+
+
+
+// Main code
+int main(int, char**)
 {
-	ImGui::SetNextWindowPos({ 0, 0 });
-	ImGui::SetNextWindowSize({ WIDTH, HEIGHT });
-	ImGui::PushStyleColor(ImGuiCol_WindowBg, ImVec4(red, green, blue, 1.0f)); // Устанавливаем цвет фона окна на тёмно-серый
+    setlocale(0, "RUSSIAN");
+    glfwSetErrorCallback(glfw_error_callback);
+    if (!glfwInit())
+        return 1;
+
+    // Decide GL+GLSL versions
+#if defined(IMGUI_IMPL_OPENGL_ES2)
+    // GL ES 2.0 + GLSL 100
+    const char* glsl_version = "#version 100";
+    glfwWindowHint(GLFW_CONTEXT_VERSION_MAJOR, 2);
+    glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, 0);
+    glfwWindowHint(GLFW_CLIENT_API, GLFW_OPENGL_ES_API);
+#elif defined(__APPLE__)
+    // GL 3.2 + GLSL 150
+    const char* glsl_version = "#version 150";
+    glfwWindowHint(GLFW_CONTEXT_VERSION_MAJOR, 3);
+    glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, 2);
+    glfwWindowHint(GLFW_OPENGL_PROFILE, GLFW_OPENGL_CORE_PROFILE);  // 3.2+ only
+    glfwWindowHint(GLFW_OPENGL_FORWARD_COMPAT, GL_TRUE);            // Required on Mac
+#else
+    // GL 3.0 + GLSL 130
+    const char* glsl_version = "#version 130";
+    glfwWindowHint(GLFW_CONTEXT_VERSION_MAJOR, 3);
+    glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, 0);
+    //glfwWindowHint(GLFW_OPENGL_PROFILE, GLFW_OPENGL_CORE_PROFILE);  // 3.2+ only
+    //glfwWindowHint(GLFW_OPENGL_FORWARD_COMPAT, GL_TRUE);            // 3.0+ only
+#endif
+
+    // Create window with graphics context
+    //glfwWindowHint(GLFW_DECORATED, GLFW_FALSE);
+	GLFWwindow* window = glfwCreateWindow(800, 500, "Visual Command Assembler", nullptr, nullptr);
+	
+    if (window == nullptr)
+        return 1;
+    glfwMakeContextCurrent(window);
+    glfwSwapInterval(1); // Enable vsync
+
+    // Setup Dear ImGui context
+    IMGUI_CHECKVERSION();
+    ImGui::CreateContext();
+    ImGuiIO& io = ImGui::GetIO(); (void)io;
+	ImFont* font = io.Fonts->AddFontFromFileTTF("/home/user/Desktop/kurs/fonts/arialmt.ttf", 16.5f, nullptr, io.Fonts->GetGlyphRangesCyrillic());
+    io.ConfigFlags |= ImGuiConfigFlags_NavEnableKeyboard;     // Enable Keyboard Controls
+    io.ConfigFlags |= ImGuiConfigFlags_NavEnableGamepad;      // Enable Gamepad Controls
+    
+    // Setup Dear ImGui style
+    ImGui::StyleColorsDark();
+    //ImGui::StyleColorsLight();
+
+    // Setup Platform/Renderer backends
+    ImGui_ImplGlfw_InitForOpenGL(window, true);
+#ifdef __EMSCRIPTEN__
+    ImGui_ImplGlfw_InstallEmscriptenCallbacks(window, "#canvas");
+#endif
+    ImGui_ImplOpenGL3_Init(glsl_version);
+
+    // Load Fonts
+    // - If no fonts are loaded, dear imgui will use the default font. You can also load multiple fonts and use ImGui::PushFont()/PopFont() to select them.
+    // - AddFontFromFileTTF() will return the ImFont* so you can store it if you need to select the font among multiple.
+    // - If the file cannot be loaded, the function will return a nullptr. Please handle those errors in your application (e.g. use an assertion, or display an error and quit).
+    // - The fonts will be rasterized at a given size (w/ oversampling) and stored into a texture when calling ImFontAtlas::Build()/GetTexDataAsXXXX(), which ImGui_ImplXXXX_NewFrame below will call.
+    // - Use '#define IMGUI_ENABLE_FREETYPE' in your imconfig file to use Freetype for higher quality font rendering.
+    // - Read 'docs/FONTS.md' for more instructions and details.
+    // - Remember that in C/C++ if you want to include a backslash \ in a string literal you need to write a double backslash \\ !
+    // - Our Emscripten build process allows embedding fonts to be accessible at runtime from the "fonts/" folder. See Makefile.emscripten for details.
+    //io.Fonts->AddFontDefault();
+    //io.Fonts->AddFontFromFileTTF("c:\\Windows\\Fonts\\segoeui.ttf", 18.0f);
+    //io.Fonts->AddFontFromFileTTF("../../misc/fonts/DroidSans.ttf", 16.0f);
+    //io.Fonts->AddFontFromFileTTF("../../misc/fonts/Roboto-Medium.ttf", 16.0f);
+    //io.Fonts->AddFontFromFileTTF("../../misc/fonts/Cousine-Regular.ttf", 15.0f);
+    //ImFont* font = io.Fonts->AddFontFromFileTTF("c:\\Windows\\Fonts\\ArialUni.ttf", 18.0f, nullptr, io.Fonts->GetGlyphRangesJapanese());
+	//ImFont* font = io.Fonts->AddFontFromFileTTF("/\\home\\user\\Desktop\\kurs\\fonts\\arialmt.ttf", 18.0f, nullptr, io.Fonts->GetGlyphRangesJapanese());
+    //IM_ASSERT(font != nullptr);
+
+    // Our state
+
+    ImVec4 clear_color = ImVec4(0.45f, 0.55f, 0.60f, 1.00f);
+
+    // Main loop
+#ifdef __EMSCRIPTEN__
+    // For an Emscripten build we are disabling file-system access, so let's not attempt to do a fopen() of the imgui.ini file.
+    // You may manually call LoadIniSettingsFromMemory() to load settings from your own storage.
+    io.IniFilename = nullptr;
+    EMSCRIPTEN_MAINLOOP_BEGIN
+#else
+    while (!glfwWindowShouldClose(window))
+#endif
+    {
+        // Poll and handle events (inputs, window resize, etc.)
+        // You can read the io.WantCaptureMouse, io.WantCaptureKeyboard flags to tell if dear imgui wants to use your inputs.
+        // - When io.WantCaptureMouse is true, do not dispatch mouse input data to your main application, or clear/overwrite your copy of the mouse data.
+        // - When io.WantCaptureKeyboard is true, do not dispatch keyboard input data to your main application, or clear/overwrite your copy of the keyboard data.
+        // Generally you may always pass all inputs to dear imgui, and hide them from your application based on those two flags.
+        glfwPollEvents();
+        if (glfwGetWindowAttrib(window, GLFW_ICONIFIED) != 0)
+        {
+            ImGui_ImplGlfw_Sleep(10);
+            continue;
+        }
+
+        // Start the Dear ImGui frame
+        ImGui_ImplOpenGL3_NewFrame();
+        ImGui_ImplGlfw_NewFrame();
+        ImGui::NewFrame();
 
 
+        // 2. Show a simple window that we create ourselves. We use a Begin/End pair to create a named window.
+       
+{
+    ImGui::SetNextWindowPos({ 0, 0 });
+	ImGui::SetNextWindowSize({ 800, 500 });
+    ImGui::PushStyleColor(ImGuiCol_WindowBg, ImVec4(red, green, blue, 1.0f)); 
 	ImGui::Begin(
-		(const char*)u8"Visual Command Assembler",
-		&isRunning,
+	"Visual Command Assembler",
+    	&isRunning,
 		ImGuiWindowFlags_NoResize |
 		ImGuiWindowFlags_NoSavedSettings |
 		ImGuiWindowFlags_NoCollapse |
-		ImGuiWindowFlags_NoMove 
+		ImGuiWindowFlags_NoMove
 	);
 	ImGui::PushStyleColor(ImGuiCol_Text, ImVec4(red1, green1, blue1, 1.0f));
 	ImGui::PushStyleColor(ImGuiCol_Button, ImVec4(redbutton, greenbutton, bluebutton, 1.0f));
-	ImGui::PushStyleColor(ImGuiCol_PopupBg, ImVec4(red, green, blue, 1.0f)); // Установите цвет для выпадающего окна
+	ImGui::PushStyleColor(ImGuiCol_PopupBg, ImVec4(red, green, blue, 1.0f)); 
 	
-	ImGui::TextColored(ImVec4(red1, green1, blue1, 1),(const char*)u8"Регистр");
+	ImGui::TextColored(ImVec4(red1, green1, blue1, 1),(const char*)u8"Р РµРіРёСЃС‚СЂ");
 	ImGui::SameLine();
 	ImGui::SetNextItemWidth(ImGui::GetWindowWidth() * 0.08f);
-	ImGui::Combo((const char*)u8"", &NumberRegistr, Registres, IM_ARRAYSIZE(Registres));
+	ImGui::Combo((const char*)u8"##hiddencombo", &NumberRegistr, Registres, IM_ARRAYSIZE(Registres));
 	registr = Registres[NumberRegistr];
 	ImGui::SameLine(670, 0);
 	std::transform(znachbyte1.begin(), znachbyte1.end(), znachbyte1.begin(),
@@ -413,7 +313,7 @@ void gui::Render() noexcept
 		[](unsigned char c) { return std::toupper(c); });
 	std::transform(byte4.begin(), byte4.end(), byte4.begin(),
 		[](unsigned char c) { return std::toupper(c); });
-	if (ImGui::Button((const char*)u8"Сменить тему")) {
+	if (ImGui::Button((const char*)u8"РЎРјРµРЅРёС‚СЊ С‚РµРјСѓ")) {
 		if (green == 1) {
 			green = 0;
 			blue = 0;
@@ -438,7 +338,7 @@ void gui::Render() noexcept
 		}
 	}
 	ImGui::PushStyleColor(ImGuiCol_Border, ImVec4(red1, green1, blue1, 1.0f));
-	ImGui::BeginChild("Левая панель", ImVec2(404, 300), true);
+	ImGui::BeginChild("Р›РµРІР°СЏ РїР°РЅРµР»СЊ", ImVec2(404, 300), true);
 	ImGui::TextColored(ImVec4(red1, green1, blue1, 1),"31           ");
 	ImGui::SameLine();
 	ImGui::TextColored(ImVec4(red1, green1, blue1, 1),(const char*)registr.c_str());
@@ -447,7 +347,7 @@ void gui::Render() noexcept
 	ImGui::SameLine();
 	ImGui::PushStyleColor(ImGuiCol_Button, ImVec4(1.00, 1.00, 0, 1));
 	ImGui::PushStyleColor(ImGuiCol_Text, ImVec4(0, 0, 0, 1.0f));
-	if (ImGui::Button((const char*)u8"Очистить регистр"))
+	if (ImGui::Button((const char*)u8"РћС‡РёСЃС‚РёС‚СЊ СЂРµРіРёСЃС‚СЂ"))
 	{
 		byteregistrs[NumberRegistr / 4][0] = "00";
 		byteregistrs[NumberRegistr / 4][1] = "00";
@@ -658,11 +558,11 @@ void gui::Render() noexcept
 			}
 		}
 	ImGui::SetNextItemWidth(ImGui::GetWindowWidth() * 0.15f);
-	ImGui::Combo((const char*)u8"Выбрать команду", &NumberCommand, Commads, IM_ARRAYSIZE(Commads));
+	ImGui::Combo((const char*)u8"Р’С‹Р±СЂР°С‚СЊ РєРѕРјР°РЅРґСѓ", &NumberCommand, Commads, IM_ARRAYSIZE(Commads));
 	ImGui::SameLine();
 	ImGui::PushStyleColor(ImGuiCol_Button, ImVec4(0, 0.5, 0, 1));
 	ImGui::PushStyleColor(ImGuiCol_Text, ImVec4(1, 1, 1, 1.0f));
-	if (ImGui::Button((const char*)u8"Активировать команду"))
+	if (ImGui::Button((const char*)u8"РђРєС‚РёРІРёСЂРѕРІР°С‚СЊ РєРѕРјР°РЅРґСѓ"))
 	{
 		if ((NumberElements - 2) % 4 != 0 and NumberElements >= 18) error = 8;
 		else
@@ -705,7 +605,7 @@ void gui::Render() noexcept
 			BlinkingText((const char*)registr.c_str());
 			ImGui::SameLine();
 			ImGui::SetNextItemWidth(ImGui::GetWindowWidth() * 0.15f);
-			if (!isBlinking) ImGui::Combo((const char*)u8"", &NumberElements, Elements, IM_ARRAYSIZE(Elements));
+			if (!isBlinking) ImGui::Combo((const char*)u8"##hiddencombo2", &NumberElements, Elements, IM_ARRAYSIZE(Elements));
 			else BlinkingText((const char*)Elements[NumberElements]);
 		}
 		else
@@ -715,7 +615,7 @@ void gui::Render() noexcept
 			ImGui::TextColored(ImVec4(red1, green1, blue1, 1),(const char*)registr.c_str());
 			ImGui::SameLine();
 			ImGui::SetNextItemWidth(ImGui::GetWindowWidth() * 0.15f);
-			if (!isBlinking) ImGui::Combo((const char*)u8"", &NumberElements, Elements, IM_ARRAYSIZE(Elements));
+			if (!isBlinking) ImGui::Combo((const char*)u8"##Combo", &NumberElements, Elements, IM_ARRAYSIZE(Elements));
 			else ImGui::TextColored(ImVec4(red1, green1, blue1, 1), (const char*)Elements[NumberElements]);
 		}
 
@@ -734,7 +634,7 @@ void gui::Render() noexcept
 			BlinkingText((const char*)registr.c_str());
 			ImGui::SameLine();
 			ImGui::SetNextItemWidth(ImGui::GetWindowWidth() * 0.15f);
-			if (!isBlinking) ImGui::Combo((const char*)u8"", &NumberElements, Elements, IM_ARRAYSIZE(Elements));
+			if (!isBlinking) ImGui::Combo((const char*)u8"##Combo2", &NumberElements, Elements, IM_ARRAYSIZE(Elements));
 			else BlinkingText((const char*)Elements[NumberElements]);
 	
 		}
@@ -745,7 +645,7 @@ void gui::Render() noexcept
 			ImGui::TextColored(ImVec4(red1, green1, blue1, 1),(const char*)registr.c_str());
 			ImGui::SameLine();
 			ImGui::SetNextItemWidth(ImGui::GetWindowWidth() * 0.15f);
-			if (!isBlinking) ImGui::Combo((const char*)u8"", &NumberElements, Elements, IM_ARRAYSIZE(Elements));
+			if (!isBlinking) ImGui::Combo((const char*)u8"##Combo3", &NumberElements, Elements, IM_ARRAYSIZE(Elements));
 			else ImGui::TextColored(ImVec4(red1, green1, blue1, 1),(const char*)Elements[NumberElements]);
 	
 		}
@@ -914,16 +814,16 @@ void gui::Render() noexcept
 	}
 	ImGui::PushStyleColor(ImGuiCol_Text, ImVec4(redznach, greenznach, blueznach, 1.0f));
 	ImGui::SetNextItemWidth(ImGui::GetWindowWidth() * 0.2f);
-	ImGui::InputText("##hidden", bufznach, IM_ARRAYSIZE(bufznach), ImGuiInputTextFlags_CharsHexadecimal);
+	ImGui::InputText("##hidden1", bufznach, IM_ARRAYSIZE(bufznach), ImGuiInputTextFlags_CharsHexadecimal);
 	ImGui::PopStyleColor(1);
 	ImGui::SameLine();
-	if (ImGui::Button((const char*)u8"Ввести переменную х1"))
+	if (ImGui::Button((const char*)u8"Р’РІРµСЃС‚Рё РїРµСЂРµРјРµРЅРЅСѓСЋ С…1"))
 	{
 		peremennai = bufznach;
 		error = 0;
 		if (NumberTypePeremennoi == 0)
 		{
-			while (size(peremennai) < 8) peremennai = "0" + peremennai;
+			while (peremennai.size() < 8) peremennai = "0" + peremennai;
 			if (NumberRegistr % 4 == 0)
 			{
 				znachbyte4 = peremennai.substr(0, 2);
@@ -934,8 +834,8 @@ void gui::Render() noexcept
 		}
 		else if (NumberTypePeremennoi == 1)
 		{
-			while (size(peremennai) < 4) peremennai = "0" + peremennai;
-			if (size(peremennai) <= 4)
+			while (peremennai.size() < 4) peremennai = "0" + peremennai;
+			if (peremennai.size() <= 4)
 			{
 					znachbyte2 = peremennai.substr(0, 2);
 					znachbyte1 = peremennai.substr(2, 2);
@@ -946,8 +846,8 @@ void gui::Render() noexcept
 		} 
 		else
 		{
-			while (size(peremennai) < 2) peremennai = "0" + peremennai;
-			if (size(peremennai) <= 2)
+			while (peremennai.size() < 2) peremennai = "0" + peremennai;
+			if (peremennai.size() <= 2)
 			{
 					znachbyte1 = peremennai.substr(0, 2);
 					znachbyte4 = "";
@@ -958,7 +858,7 @@ void gui::Render() noexcept
 		}
 	}
 	ImGui::SetNextItemWidth(ImGui::GetWindowWidth() * 0.15f);
-	ImGui::Combo((const char*)u8"Выбрать тип данных переменной x1", &NumberTypePeremennoi, TypePeremennoi, IM_ARRAYSIZE(TypePeremennoi));
+	ImGui::Combo((const char*)u8"Р’С‹Р±СЂР°С‚СЊ С‚РёРї РґР°РЅРЅС‹С… РїРµСЂРµРјРµРЅРЅРѕР№ x1", &NumberTypePeremennoi, TypePeremennoi, IM_ARRAYSIZE(TypePeremennoi));
 	ImGui::TextColored(ImVec4(red1, green1, blue1, 1),"x1");
 	ImGui::SameLine();
 	std::transform(peremennai.begin(), peremennai.end(), peremennai.begin(),
@@ -968,13 +868,13 @@ void gui::Render() noexcept
 	ImGui::TextColored(ImVec4(red1, green1, blue1, 1),(TypePeremennoi[NumberTypePeremennoi]));
 	ImGui::EndChild();
 	ImGui::SameLine(410, 0);
-	ImGui::BeginChild("Адрес", ImVec2(115, 300), true);
+	ImGui::BeginChild("РђРґСЂРµСЃ ", ImVec2(115, 300), true);
 	ImGui::InputText("##hidden", bufaddress, IM_ARRAYSIZE(bufaddress), ImGuiInputTextFlags_CharsHexadecimal);
-	if (ImGui::Button((const char*)u8"Ввести адрес"))
+	if (ImGui::Button((const char*)u8"Р’РІРµСЃС‚Рё Р°РґСЂРµСЃ"))
 	{
 		adres = bufaddress;
 		error = 0;
-		while (size(adres) < 8) adres = adres + "0";
+		while (adres.size() < 8) adres = adres + "0";
 		adresbyte1 = adres.substr(0, 2);
 		adresbyte2 = adres.substr(2, 2);
 		adresbyte3 = adres.substr(4, 2);
@@ -982,7 +882,7 @@ void gui::Render() noexcept
 	}
 	ImGui::TextColored(ImVec4(red1, green1, blue1, 1)," ");
 	ImGui::TextColored(ImVec4(red1, green1, blue1, 1)," ");
-	ImGui::TextColored(ImVec4(red1, green1, blue1, 1),(const char*)u8"Адрес");
+	ImGui::TextColored(ImVec4(red1, green1, blue1, 1),(const char*)u8"РђРґСЂРµСЃ");
 	std::transform(adresbyte1.begin(), adresbyte1.end(), adresbyte1.begin(),
 		[](unsigned char c) { return std::toupper(c); });
 	std::transform(adresbyte2.begin(), adresbyte2.end(), adresbyte2.begin(),
@@ -1052,12 +952,12 @@ void gui::Render() noexcept
 			hexadres += 1;
 			std::stringstream ss2;
 			ss2 << std::hex << hexadres;
-			if (size(ss2.str()) == 9) error = 5;
+			if (ss2.str().size() == 9) error = 5;
 			else {
 				resultString = ss2.str();
 				std::transform(resultString.begin(), resultString.end(), resultString.begin(),
 					[](unsigned char c) { return std::toupper(c); });
-				while (size(resultString) < 8) resultString = "0" + resultString;
+				while (resultString.size() < 8) resultString = "0" + resultString;
 				resultString += "h==>";
 				ImGui::TextColored(ImVec4(red1, green1, blue1, 1),"");
 				ImGui::TextColored(ImVec4(0.5, 0.5, 0.5, 1), resultString.c_str());
@@ -1073,12 +973,12 @@ void gui::Render() noexcept
 			hexadres += 1;
 			std::stringstream ss2;
 			ss2 << std::hex << hexadres;
-			if (size(ss2.str()) == 9) error = 5;
+			if (ss2.str().size() == 9) error = 5;
 			else {
 			resultString = ss2.str();
 			std::transform(resultString.begin(), resultString.end(), resultString.begin(),
 				[](unsigned char c) { return std::toupper(c); });
-				while (size(resultString) < 8) resultString = "0" + resultString;
+				while (resultString.size() < 8) resultString = "0" + resultString;
 				resultString += "h==>";
 				ImGui::TextColored(ImVec4(red1, green1, blue1, 1),"");
 				ImGui::TextColored(ImVec4(0.5, 0.5, 0.5, 1), resultString.c_str());
@@ -1091,12 +991,12 @@ void gui::Render() noexcept
 			hexadres1 += 2;
 			std::stringstream ss4;
 			ss4 << std::hex << hexadres1;
-			if (size(ss4.str()) == 9) error = 5;
+			if (ss4.str().size() == 9) error = 5;
 			else {
 				resultString = ss4.str();
 				std::transform(resultString.begin(), resultString.end(), resultString.begin(),
 					[](unsigned char c) { return std::toupper(c); });
-				while (size(resultString) < 8) resultString = "0" + resultString;
+				while (resultString.size() < 8) resultString = "0" + resultString;
 				resultString += "h==>";
 				ImGui::TextColored(ImVec4(red1, green1, blue1, 1),"");
 				ImGui::TextColored(ImVec4(0.5, 0.5, 0.5, 1), resultString.c_str());
@@ -1109,12 +1009,12 @@ void gui::Render() noexcept
 			hexadres2 += 3;
 			std::stringstream ss6;
 			ss6 << std::hex << hexadres2;
-			if (size(ss6.str()) == 9) error = 5;
+			if (ss6.str().size() == 9) error = 5;
 			else {
 				resultString = ss6.str();
 				std::transform(resultString.begin(), resultString.end(), resultString.begin(),
 					[](unsigned char c) { return std::toupper(c); });
-				while (size(resultString) < 8) resultString = "0" + resultString;
+				while (resultString.size() < 8) resultString = "0" + resultString;
 				resultString += "h==>";
 				ImGui::TextColored(ImVec4(red1, green1, blue1, 1),"");
 				ImGui::TextColored(ImVec4(0.5, 0.5, 0.5, 1), resultString.c_str());
@@ -1123,13 +1023,13 @@ void gui::Render() noexcept
 
 	ImGui::EndChild();
 	ImGui::SameLine(525, 0);
-	ImGui::BeginChild("Оперативка", ImVec2(110, 300), ImGuiWindowFlags_NoMove);
-	ImGui::TextColored(ImVec4(red1, green1, blue1, 1),(const char*)u8"Оперативная");
-	ImGui::TextColored(ImVec4(red1, green1, blue1, 1),(const char*)u8"Память");
+	ImGui::BeginChild("РћРїРµСЂР°С‚РёРІРєР°", ImVec2(110, 300), true, ImGuiWindowFlags_NoMove);
+	ImGui::TextColored(ImVec4(red1, green1, blue1, 1),(const char*)u8"РћРїРµСЂР°С‚РёРІРЅР°СЏ");
+	ImGui::TextColored(ImVec4(red1, green1, blue1, 1),(const char*)u8"РџР°РјСЏС‚СЊ");
 	ImGui::TextColored(ImVec4(red1, green1, blue1, 1)," ");
 	ImGui::TextColored(ImVec4(red1, green1, blue1, 1)," ");
 	ImGui::TextColored(ImVec4(red1, green1, blue1, 1)," ");
-	ImGui::BeginChild("Значение1", ImVec2(87, 40), true);
+	ImGui::BeginChild("Р—РЅР°С‡РµРЅРёРµ1", ImVec2(87, 40), true);
 	if (chet >= 4.5f and chet <= 9.0f and NumberCommand==1)
 	{
 		ImGui::TextColored(ImVec4(red1, green1, blue1, 1),"  ");
@@ -1145,7 +1045,7 @@ void gui::Render() noexcept
 	ImGui::EndChild();
 		if (NumberTypePeremennoi % 4 == 0)
 		{
-			ImGui::BeginChild("Значение2", ImVec2(87, 40), true);
+			ImGui::BeginChild("Р—РЅР°С‡РµРЅРёРµ2", ImVec2(87, 40), true);
 			if (chet >= 9.0f and chet <= 13.5f and NumberCommand == 1)
 			{
 				ImGui::TextColored(ImVec4(red1, green1, blue1, 1),"  ");
@@ -1160,7 +1060,7 @@ void gui::Render() noexcept
 			}
 			ImGui::EndChild();
 			
-			ImGui::BeginChild("Значение3", ImVec2(87, 40), true);
+			ImGui::BeginChild("Р—РЅР°С‡РµРЅРёРµ3", ImVec2(87, 40), true);
 			if (chet >= 13.5 and chet <= 18 and NumberCommand == 1)
 			{
 				ImGui::TextColored(ImVec4(red1, green1, blue1, 1),"  ");
@@ -1174,7 +1074,7 @@ void gui::Render() noexcept
 				ImGui::TextColored(ImVec4(red1, green1, blue1, 1),znachbyte3.c_str());
 			}
 			ImGui::EndChild();
-			ImGui::BeginChild("Значение4", ImVec2(87, 40), true);
+			ImGui::BeginChild("Р—РЅР°С‡РµРЅРёРµ4", ImVec2(87, 40), true);
 			if (chet >= 18 and chet <= 22.5)
 			{
 				ImGui::TextColored(ImVec4(red1, green1, blue1, 1),"  ");
@@ -1191,7 +1091,7 @@ void gui::Render() noexcept
 		}
 		else if (NumberTypePeremennoi % 4 == 1)
 		{
-			ImGui::BeginChild("Значение2", ImVec2(87, 40), true);
+			ImGui::BeginChild("Р—РЅР°С‡РµРЅРёРµ2", ImVec2(87, 40), true);
 			if (chet >= 9.0f and chet <= 13.5f and NumberCommand == 1)
 			{
 				ImGui::TextColored(ImVec4(red1, green1, blue1, 1),"  ");
@@ -1208,10 +1108,11 @@ void gui::Render() noexcept
 			ImGui::EndChild();
 
 		}
+	
 	ImGui::EndChild();
 	ImGui::SameLine(635, 0);
-	ImGui::BeginChild("Регистры", ImVec2(140, 300), ImGuiWindowFlags_NoMove);
-	ImGui::TextColored(ImVec4(red1, green1, blue1, 1), (const char*)u8"  Регистры");
+	ImGui::BeginChild("Р РµРіРёСЃС‚СЂС‹", ImVec2(140, 300), true, ImGuiWindowFlags_NoMove);
+	ImGui::TextColored(ImVec4(red1, green1, blue1, 1), (const char*)u8"  Р РµРіРёСЃС‚СЂС‹");
 	ImGui::TextColored(ImVec4(red1, green1, blue1, 1), " ");
 	ImGui::TextColored(ImVec4(red1, green1, blue1, 1), " ");
 	ImGui::TextColored(ImVec4(red1, green1, blue1, 1), " ");
@@ -1275,7 +1176,7 @@ void gui::Render() noexcept
 		}
 	}
 	ImGui::EndChild();
-	ImGui::BeginChild("Откладка", ImVec2(625, 150), true);
+	ImGui::BeginChild("РћС‚РєР»Р°РґРєР°", ImVec2(625, 150), true);
 	if (error == 0)
 	{
 		greenznach = green1;
@@ -1287,68 +1188,96 @@ void gui::Render() noexcept
 	}
 	else if (error == 1)
 	{
-		ImGui::TextColored(ImVec4(1.0, 0.0, 0.0, 1.0), (const char*)u8"Ошибка: Этот регистр не может быть использован для команды lea.");
-		ImGui::TextColored(ImVec4(0.0, 1.0, 0.0, 1.0), (const char*)u8"Нужно использовать регистр размера x16 или x32");
+		ImGui::TextColored(ImVec4(1.0, 0.0, 0.0, 1.0), (const char*)u8"РћС€РёР±РєР°: Р­С‚РѕС‚ СЂРµРіРёСЃС‚СЂ РЅРµ РјРѕР¶РµС‚ Р±С‹С‚СЊ РёСЃРїРѕР»СЊР·РѕРІР°РЅ РґР»СЏ РєРѕРјР°РЅРґС‹ lea.");
+		ImGui::TextColored(ImVec4(0.0, 1.0, 0.0, 1.0), (const char*)u8"РќСѓР¶РЅРѕ РёСЃРїРѕР»СЊР·РѕРІР°С‚СЊ СЂРµРіРёСЃС‚СЂ СЂР°Р·РјРµСЂР° x16 РёР»Рё x32");
 	}
 	else if (error == 2)
 	{
-		ImGui::TextColored(ImVec4(1.0, 0.0, 0.0, 1.0), (const char*)u8"Ошибка: Числовое значение переменной больше положенного");
-		ImGui::TextColored(ImVec4(0, 1.0, 0.0, 1.0), (const char*)u8"Нужно увеличить тип переменной или уменьшить ее числовое значение");
+		ImGui::TextColored(ImVec4(1.0, 0.0, 0.0, 1.0), (const char*)u8"РћС€РёР±РєР°: Р§РёСЃР»РѕРІРѕРµ Р·РЅР°С‡РµРЅРёРµ РїРµСЂРµРјРµРЅРЅРѕР№ Р±РѕР»СЊС€Рµ РїРѕР»РѕР¶РµРЅРЅРѕРіРѕ");
+		ImGui::TextColored(ImVec4(0, 1.0, 0.0, 1.0), (const char*)u8"РќСѓР¶РЅРѕ СѓРІРµР»РёС‡РёС‚СЊ С‚РёРї РїРµСЂРµРјРµРЅРЅРѕР№ РёР»Рё СѓРјРµРЅСЊС€РёС‚СЊ РµРµ С‡РёСЃР»РѕРІРѕРµ Р·РЅР°С‡РµРЅРёРµ");
 		greenznach = 0;
 		blueznach = 0;
 		redznach = 1;
 	}
 	else if (error == 3)
 	{
-		ImGui::TextColored(ImVec4(1.0, 0.0, 0.0, 1.0), (const char*)u8"Ошибка: Основной регистр больше переменной x1 или другого регистра");
-		ImGui::TextColored(ImVec4(0, 1.0, 0.0, 1.0), (const char*)u8"Нужно увеличить переменную или уменьшить регистр");
+		ImGui::TextColored(ImVec4(1.0, 0.0, 0.0, 1.0), (const char*)u8"РћС€РёР±РєР°: РћСЃРЅРѕРІРЅРѕР№ СЂРµРіРёСЃС‚СЂ Р±РѕР»СЊС€Рµ РїРµСЂРµРјРµРЅРЅРѕР№ x1 РёР»Рё РґСЂСѓРіРѕРіРѕ СЂРµРіРёСЃС‚СЂР°");
+		ImGui::TextColored(ImVec4(0, 1.0, 0.0, 1.0), (const char*)u8"РќСѓР¶РЅРѕ СѓРІРµР»РёС‡РёС‚СЊ РїРµСЂРµРјРµРЅРЅСѓСЋ РёР»Рё СѓРјРµРЅСЊС€РёС‚СЊ СЂРµРіРёСЃС‚СЂ");
 	}
 	else if (error == 4)
 	{
-		ImGui::TextColored(ImVec4(1.0, 0.0, 0.0, 1.0), (const char*)u8"Ошибка: Переменная x1 или другой регистр больше основного регистра ");
-		ImGui::TextColored(ImVec4(0, 1.0, 0.0, 1.0), (const char*)u8"Нужно увеличить регистр или уменьшить переменную");
+		ImGui::TextColored(ImVec4(1.0, 0.0, 0.0, 1.0), (const char*)u8"РћС€РёР±РєР°: РџРµСЂРµРјРµРЅРЅР°СЏ x1 РёР»Рё РґСЂСѓРіРѕР№ СЂРµРіРёСЃС‚СЂ Р±РѕР»СЊС€Рµ РѕСЃРЅРѕРІРЅРѕРіРѕ СЂРµРіРёСЃС‚СЂР°");
+		ImGui::TextColored(ImVec4(0, 1.0, 0.0, 1.0), (const char*)u8"РќСѓР¶РЅРѕ СѓРІРµР»РёС‡РёС‚СЊ СЂРµРіРёСЃС‚СЂ РёР»Рё СѓРјРµРЅСЊС€РёС‚СЊ РїРµСЂРµРјРµРЅРЅСѓСЋ");
 
 	}
 	else if (error == 5)
 	{
-		ImGui::TextColored(ImVec4(1.0, 0.0, 0.0, 1.0), (const char*)u8"Ошибка: Выход за диапазон адресов ");
-		ImGui::TextColored(ImVec4(0.0, 1.0, 0.0, 1.0), (const char*)u8"Нужно уменьшить адрес ");
+		ImGui::TextColored(ImVec4(1.0, 0.0, 0.0, 1.0), (const char*)u8"РћС€РёР±РєР°: Р’С‹С…РѕРґ Р·Р° РґРёР°РїР°Р·РѕРЅ Р°РґСЂРµСЃРѕРІ");
+		ImGui::TextColored(ImVec4(0.0, 1.0, 0.0, 1.0), (const char*)u8"РќСѓР¶РЅРѕ СѓРјРµРЅСЊС€РёС‚СЊ Р°РґСЂРµСЃ");
 		greenadres = 0;
 		blueadres = 0;
 		redadres = 1;
 	}
 	else if (error == 6)
 	{
-		ImGui::TextColored(ImVec4(1.0, 0.0, 0.0, 1.0), (const char*)u8"Выберите команду");
+		ImGui::TextColored(ImVec4(1.0, 0.0, 0.0, 1.0), (const char*)u8"Р’С‹Р±РµСЂРёС‚Рµ РєРѕРјР°РЅРґСѓ");
 
 	}
 	else if (error == 7)
 	{
-		ImGui::TextColored(ImVec4(1.0, 0.0, 0.0, 1.0), (const  char*)u8"Ошибка: Нельзя найти адрес регистра");
-		ImGui::TextColored(ImVec4(0.0, 1.0, 0.0, 1.0), (const char*)u8"Нужно выбрать переменную");
+		ImGui::TextColored(ImVec4(1.0, 0.0, 0.0, 1.0), (const  char*)u8"РћС€РёР±РєР°: РќРµР»СЊР·СЏ РЅР°Р№С‚Рё Р°РґСЂРµСЃ СЂРµРіРёСЃС‚СЂР°");
+		ImGui::TextColored(ImVec4(0.0, 1.0, 0.0, 1.0), (const char*)u8"РќСѓР¶РЅРѕ РІС‹Р±СЂР°С‚СЊ РїРµСЂРµРјРµРЅРЅСѓСЋ");
 	}
 	else if (error == 8)
 	{
-		ImGui::TextColored(ImVec4(1.0, 0.0, 0.0, 1.0), (const  char*)u8"Ошибка: Указатель должен быть с базовым регистром");
-		ImGui::TextColored(ImVec4(0.0, 1.0, 0.0, 1.0), (const char*)u8"Нужно выбрать указатель с четырехбайтным регистром");
+		ImGui::TextColored(ImVec4(1.0, 0.0, 0.0, 1.0), (const  char*)u8"РћС€РёР±РєР°: РЈРєР°Р·Р°С‚РµР»СЊ РґРѕР»Р¶РµРЅ Р±С‹С‚СЊ СЃ Р±Р°Р·РѕРІС‹Рј СЂРµРіРёСЃС‚СЂРѕРј");
+		ImGui::TextColored(ImVec4(0.0, 1.0, 0.0, 1.0), (const char*)u8"РќСѓР¶РЅРѕ РІС‹Р±СЂР°С‚СЊ СѓРєР°Р·Р°С‚РµР»СЊ СЃ С‡РµС‚С‹СЂРµС…Р±Р°Р№С‚РЅС‹Рј СЂРµРіРёСЃС‚СЂРѕРј");
 	}
 	else if (error == 9)
 	{
-		ImGui::TextColored(ImVec4(1.0, 0.0, 0.0, 1.0), (const  char*)u8"Ошибка: Выход за пределы значения переменной");
-		ImGui::TextColored(ImVec4(0.0, 1.0, 0.0, 1.0), (const char*)u8"Нужно увеличить адрес или уменьшить значение указателя");
+		ImGui::TextColored(ImVec4(1.0, 0.0, 0.0, 1.0), (const  char*)u8"РћС€РёР±РєР°: Р’С‹С…РѕРґ Р·Р° РїСЂРµРґРµР»С‹ Р·РЅР°С‡РµРЅРёСЏ РїРµСЂРµРјРµРЅРЅРѕР№");
+		ImGui::TextColored(ImVec4(0.0, 1.0, 0.0, 1.0), (const char*)u8"РќСѓР¶РЅРѕ СѓРІРµР»РёС‡РёС‚СЊ Р°РґСЂРµСЃ РёР»Рё СѓРјРµРЅСЊС€РёС‚СЊ Р·РЅР°С‡РµРЅРёРµ СѓРєР°Р·Р°С‚РµР»СЊ");
 	}
 	ImGui::EndChild();
-	ImGui::TextColored(ImVec4(red1, green1, blue1, 1),(const char*)u8"Мои ссылки");
+	ImGui::TextColored(ImVec4(red1, green1, blue1, 1),(const char*)u8"РњРѕРё СЃСЃС‹Р»РєРё");
 	ImGui::Separator();
 
 	if (ImGui::Button("YouTube")) {
-		ShellExecute(NULL, "open", "https://www.youtube.com/c/@king174rus", 0, 0, SW_SHOWNORMAL);
+		system("xdg-open https://www.youtube.com/c/@king174rus");
 	}
 	ImGui::SameLine(); ImGui::Text(" "); ImGui::SameLine();
 	if (ImGui::Button((const char*)u8"GitHub")) {
-		ShellExecute(NULL, "open", "https://github.com/king174rus", 0, 0, SW_SHOWNORMAL);
+		system("xdg-open https://github.com/king174rus");
 	}
-	ImGui::PopStyleColor(4); // Возвращаем стандартный цвет фона окна
+	ImGui::PopStyleColor(5); 
 
-	ImGui::End();
+	
+    ImGui::End();
+        }
+
+
+        // Rendering
+        ImGui::Render();
+        int display_w, display_h;
+        glfwGetFramebufferSize(window, &display_w, &display_h);
+        glViewport(0, 0, display_w, display_h);
+        glClearColor(clear_color.x * clear_color.w, clear_color.y * clear_color.w, clear_color.z * clear_color.w, clear_color.w);
+        glClear(GL_COLOR_BUFFER_BIT);
+        ImGui_ImplOpenGL3_RenderDrawData(ImGui::GetDrawData());
+
+        glfwSwapBuffers(window);
+    }
+#ifdef __EMSCRIPTEN__
+    EMSCRIPTEN_MAINLOOP_END;
+#endif
+
+    // Cleanup
+    ImGui_ImplOpenGL3_Shutdown();
+    ImGui_ImplGlfw_Shutdown();
+    ImGui::DestroyContext();
+
+    glfwDestroyWindow(window);
+    glfwTerminate();
+
+    return 0;
 }
