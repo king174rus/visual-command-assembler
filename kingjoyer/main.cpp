@@ -6,8 +6,7 @@ int __stdcall wWinMain(  //__stdcall wWinMain
 	HINSTANCE instance,
 	HINSTANCE previousInstance,
 	PWSTR arguments,
-	int commandShow)
-{
+	int commandShow){
 	setlocale(LC_ALL, "RUSSIAN");
 	///
 	// create gui
