@@ -79,6 +79,8 @@ string peremennai = "4B5A1120";
 string adres = "0005A420";
 string resultString = "";
 string glavregistr = "00000000";
+string byteregistrs[6][4] = { {"00","00","00","00"},{"00","00","00","00"} ,{"00","00","00","00"} ,{"00","00","00","00"},{"00","40","10","00"},{"00","40","10","00"}};
+
 
 float greenznach = 1;
 float blueznach = 1;
@@ -95,24 +97,35 @@ float red1 = 0;
 float redbutton = 0.11;
 float greenbutton = 0.56;
 float bluebutton = 1;
+float timer = 0.0f;
+float chet = 0.0f;
 
-const char* Registres[] = { "EAX", "AX", "AH", "AL","EBX", "BX", "BH", "BL" ,"ECX", "CX", "CH", "CL" ,"EDX", "DX", "DH", "DL" };
+bool DF = false;
+bool isBlinking = false;
+
+
+const char* Registres[] = { "EAX", "AX", "AH", "AL","EBX", "BX", "BH", "BL" ,"ECX", "CX", "CH", "CL" ,"EDX", "DX", "DH", "DL", "ESI", "SI", "EDI", "DI"};
 static int NumberRegistr = 0;
 const char* TypePeremennoi[] = { "dd", "dw", "db"};
 static int NumberTypePeremennoi = 0;
-const char* Elements[] = { "x1", "[x1]", "EAX", "AX", "AH", "AL","EBX", "BX", "BH", "BL" ,"ECX", "CX", "CH", "CL" ,"EDX", "DX", "DH", "DL",
-						  "[EAX]", "[AX]", "[AH]", "[AL]","[EBX]", "[BX]", "[BH]", "[BL]" ,"[ECX]", "[CX]", "[CH]", "[CL]" ,"[EDX]", "[DX]", "[DH]", "[DL]" };
+const char* Elements[] = { "x1", "[x1]", "EAX", "AX", "AH", "AL","EBX", "BX", "BH", "BL" ,"ECX", "CX", "CH", "CL" ,"EDX", "DX", "DH", "DL", "ESI", "SI", " "," ",  "EDI", "DI"," ", " ",
+						  "[EAX]", "[AX]", "[AH]", "[AL]","[EBX]", "[BX]", "[BH]", "[BL]" ,"[ECX]", "[CX]", "[CH]", "[CL]" ,"[EDX]", "[DX]", "[DH]", "[DL]", "[ESI]", "[SI]"," ", " ", "[EDI]", "[DI]"," ", " " };
+const char* FakeElements[] = { "x1", "[x1]", "EAX", "AX", "AH", "AL","EBX", "BX", "BH", "BL" ,"ECX", "CX", "CH", "CL" ,"EDX", "DX", "DH", "DL", "ESI", "SI", "EDI", "DI",
+						  "[EAX]", "[AX]", "[AH]", "[AL]","[EBX]", "[BX]", "[BH]", "[BL]" ,"[ECX]", "[CX]", "[CH]", "[CL]" ,"[EDX]", "[DX]", "[DH]", "[DL]", "[ESI]", "[SI]", "[EDI]", "[DI]" };
+static int FakeNumberElements = 0;
 static int NumberElements = 0;
+string ElementsCommands[2][5] = { {"0005A420", "00", "05", "A4", "20"}, {"00401000", "00", "40", "10","00"} };
+string predZnach[4] = { "00", "40", "10","00" };
+static int NumberElementCommands = 0;
 
-
-const char* Commads[] = {"LEA", "MOV"};
+const char* Commads[] = {"LEA", "MOV", "LODSB", "LODSW", "LODSD", "STOSB", "STOSW", "STOSD", "CLD", "STD"};
 static int NumberCommand = -1;
-float timer = 0.0f;
-float chet = 0.0f;
+
 int error = 0;
-bool isBlinking = false;
-string byteregistrs[4][4] = { {"00","00","00","00"},{"00","00","00","00"} ,{"00","00","00","00"} ,{"00","00","00","00"} };
 int otchet = 0;
+int bitysInRegistr = 4;
+int Registr = 0;
+long long AdresHex = 0;
 
 void BlinkingText(const char* text)
 {
@@ -132,6 +145,22 @@ void BlinkingText(const char* text)
 		}
 	}
 	ImGui::TextColored(ImVec4(red1, green1, blue1, 1),text);
+}
+void UnderlineText(const char* text, float start, float size, float tolshina)
+{
+
+	// Получаем текущую позицию и размер текста
+	ImVec2 textSize = ImGui::CalcTextSize(text);
+	ImVec2 textPos = ImGui::GetCursorScreenPos();
+
+	// Рисуем линию под текстом
+	ImGui::GetWindowDrawList()->AddLine(
+		ImVec2(textPos.x + start, textPos.y + textSize.y + tolshina), // Начальная точка линии
+		ImVec2(textPos.x + start + textSize.x + size, textPos.y + textSize.y + tolshina), // Конечная точка линии
+		IM_COL32(red1 * 255, green1 * 255, blue1 * 255, 255) // Цвет линии (можно изменить на свой)
+	);
+
+	return;
 }
 void ByteText(string byte[4])
 {
@@ -160,6 +189,21 @@ void ByteText(string byte[4])
 		if(i != 3) ImGui::SameLine(0, 0);
 	}
 	return;
+}
+
+unsigned long long convertStringtoHex(string str)
+{
+	unsigned long long hex;
+	std::stringstream ss;
+	ss << std::hex << str;
+	ss >> hex;
+	return hex;
+}
+string convertHextoString(unsigned long long hex)
+{
+	std::stringstream ss;
+	ss << std::hex << hex;
+	return ss.str();
 }
 
 
@@ -208,7 +252,7 @@ int main(int, char**)
     IMGUI_CHECKVERSION();
     ImGui::CreateContext();
     ImGuiIO& io = ImGui::GetIO(); (void)io;
-	ImFont* font = io.Fonts->AddFontFromFileTTF("/home/user/Desktop/kurs/fonts/arialmt.ttf", 16.5f, nullptr, io.Fonts->GetGlyphRangesCyrillic());
+	ImFont* font = io.Fonts->AddFontFromFileTTF("/usr/share/fonts/truetype/liberation/LiberationMono-Bold.ttf", 16.5f, nullptr, io.Fonts->GetGlyphRangesCyrillic());
     io.ConfigFlags |= ImGuiConfigFlags_NavEnableKeyboard;     // Enable Keyboard Controls
     io.ConfigFlags |= ImGuiConfigFlags_NavEnableGamepad;      // Enable Gamepad Controls
     
@@ -222,8 +266,8 @@ int main(int, char**)
     ImGui_ImplGlfw_InstallEmscriptenCallbacks(window, "#canvas");
 #endif
     ImGui_ImplOpenGL3_Init(glsl_version);
-
-    // Load Fonts
+//
+    // Load Font
     // - If no fonts are loaded, dear imgui will use the default font. You can also load multiple fonts and use ImGui::PushFont()/PopFont() to select them.
     // - AddFontFromFileTTF() will return the ImFont* so you can store it if you need to select the font among multiple.
     // - If the file cannot be loaded, the function will return a nullptr. Please handle those errors in your application (e.g. use an assertion, or display an error and quit).
@@ -279,23 +323,20 @@ int main(int, char**)
     ImGui::SetNextWindowPos({ 0, 0 });
 	ImGui::SetNextWindowSize({ 800, 500 });
     ImGui::PushStyleColor(ImGuiCol_WindowBg, ImVec4(red, green, blue, 1.0f)); 
+	
 	ImGui::Begin(
-	"Visual Command Assembler",
-    	&isRunning,
+		(const char*)u8"Visual Command Assembler",
+		&isRunning,
 		ImGuiWindowFlags_NoResize |
 		ImGuiWindowFlags_NoSavedSettings |
 		ImGuiWindowFlags_NoCollapse |
-		ImGuiWindowFlags_NoMove
+		ImGuiWindowFlags_NoMove 
 	);
 	ImGui::PushStyleColor(ImGuiCol_Text, ImVec4(red1, green1, blue1, 1.0f));
 	ImGui::PushStyleColor(ImGuiCol_Button, ImVec4(redbutton, greenbutton, bluebutton, 1.0f));
-	ImGui::PushStyleColor(ImGuiCol_PopupBg, ImVec4(red, green, blue, 1.0f)); 
+	ImGui::PushStyleColor(ImGuiCol_PopupBg, ImVec4(red, green, blue, 1.0f)); // Установите цвет для выпадающего окна
+	ImGui::TextColored(ImVec4(red1, green1, blue1, 1), (const char*)u8"Визуализация команд ассемблера");
 	
-	ImGui::TextColored(ImVec4(red1, green1, blue1, 1),(const char*)u8"Регистр");
-	ImGui::SameLine();
-	ImGui::SetNextItemWidth(ImGui::GetWindowWidth() * 0.08f);
-	ImGui::Combo((const char*)u8"##hiddencombo", &NumberRegistr, Registres, IM_ARRAYSIZE(Registres));
-	registr = Registres[NumberRegistr];
 	ImGui::SameLine(670, 0);
 	std::transform(znachbyte1.begin(), znachbyte1.end(), znachbyte1.begin(),
 		[](unsigned char c) { return std::toupper(c); });
@@ -338,24 +379,32 @@ int main(int, char**)
 		}
 	}
 	ImGui::PushStyleColor(ImGuiCol_Border, ImVec4(red1, green1, blue1, 1.0f));
-	ImGui::BeginChild("Левая панель", ImVec2(404, 300), true);
-	ImGui::TextColored(ImVec4(red1, green1, blue1, 1),"31           ");
+
+
+	ImGui::BeginChild("Левая панель", ImVec2(404, 360), true);
+	ImGui::TextColored(ImVec4(red1, green1, blue1, 1), (const char*)u8"Регистр");
+	ImGui::SameLine();
+	ImGui::SetNextItemWidth(ImGui::GetWindowWidth() * 0.15f);
+	ImGui::Combo((const char*)u8"##123", &NumberRegistr, Registres, IM_ARRAYSIZE(Registres));
+	registr = Registres[NumberRegistr];
+
+	ImGui::TextColored(ImVec4(red1, green1, blue1, 1),"31     ");
 	ImGui::SameLine();
 	ImGui::TextColored(ImVec4(red1, green1, blue1, 1),(const char*)registr.c_str());
 	ImGui::SameLine();
-	ImGui::TextColored(ImVec4(red1, green1, blue1, 1),"             0");
+	ImGui::TextColored(ImVec4(red1, green1, blue1, 1),"      0");
 	ImGui::SameLine();
 	ImGui::PushStyleColor(ImGuiCol_Button, ImVec4(1.00, 1.00, 0, 1));
 	ImGui::PushStyleColor(ImGuiCol_Text, ImVec4(0, 0, 0, 1.0f));
 	if (ImGui::Button((const char*)u8"Очистить регистр"))
 	{
-		byteregistrs[NumberRegistr / 4][0] = "00";
-		byteregistrs[NumberRegistr / 4][1] = "00";
-		byteregistrs[NumberRegistr / 4][2] = "00";
-		byteregistrs[NumberRegistr / 4][3] = "00";
+		byteregistrs[Registr][0] = "00";
+		byteregistrs[Registr][1] = "00";
+		byteregistrs[Registr][2] = "00";
+		byteregistrs[Registr][3] = "00";
 	}
 	ImGui::PopStyleColor(2);
-	if (NumberRegistr % 4 == 0)
+	if (bitysInRegistr == 4 and NumberCommand < 2)
 	{
 		if (chet >= 9 and chet <= 13.5 and NumberCommand == 0)
 		{
@@ -369,19 +418,19 @@ int main(int, char**)
 		}
 		else if (chet >= 9 and chet <= 13.5 and NumberCommand == 1)
 		{
-			byteregistrs[NumberRegistr / 4][3] = znachbyte1;
+			byteregistrs[Registr][3] = znachbyte1;
 			string bytes[4] = { "White", "White", "Blink", "White" };
 			ByteText(bytes);
 		}
 		else if (chet >= 13.5 and chet <= 18 and NumberCommand == 1)
 		{
-			byteregistrs[NumberRegistr / 4][2] = znachbyte2;
+			byteregistrs[Registr][2] = znachbyte2;
 			string bytes[4] = { "White", "Blink", "White", "White" };
 			ByteText(bytes);
 		}
 		else if (chet >= 18 and chet <= 22.5 and NumberCommand == 1)
 		{
-			byteregistrs[NumberRegistr / 4][1] = znachbyte3;
+			byteregistrs[Registr][1] = znachbyte3;
 			string bytes[4] = { "Blink", "White", "White", "White" };
 			ByteText(bytes);
 		}
@@ -389,7 +438,7 @@ int main(int, char**)
 			chet = 0.0f;
 			timer = 0.0f;
 			isBlinking = !isBlinking;
-			byteregistrs[NumberRegistr / 4][0] = znachbyte4;
+			byteregistrs[Registr][0] = znachbyte4;
 			string bytes[4] = { "White", "White", "White", "White" };
 			ByteText(bytes);
 		}
@@ -397,21 +446,21 @@ int main(int, char**)
 			chet = 0.0f;
 			timer = 0.0f;
 			isBlinking = !isBlinking;
-			byteregistrs[NumberRegistr / 4][0] = adresbyte1;
-			byteregistrs[NumberRegistr / 4][1] = adresbyte2;
-			byteregistrs[NumberRegistr / 4][2] = adresbyte3;
-			byteregistrs[NumberRegistr / 4][3] = adresbyte4;
+			byteregistrs[Registr][0] = ElementsCommands[NumberElementCommands][1];
+			byteregistrs[Registr][1] = ElementsCommands[NumberElementCommands][2];
+			byteregistrs[Registr][2] = ElementsCommands[NumberElementCommands][3];
+			byteregistrs[Registr][3] = ElementsCommands[NumberElementCommands][4];
 			string bytes[4] = { "White", "White", "White", "White" };
 			ByteText(bytes);
 		}
-		else if (chet >= 13.5 and NumberCommand == 0 and NumberElements>=18 and (NumberElements-2)%4==0) {
+		else if (chet >= 13.5 and NumberCommand == 0 and ((NumberElements >= 26 and (NumberElements-2)%4 == 0))) {
 			chet = 0.0f;
 			timer = 0.0f;
 			isBlinking = !isBlinking;
-			byteregistrs[NumberRegistr / 4][0] = byteregistrs[(NumberElements-18) / 4][0];
-			byteregistrs[NumberRegistr / 4][1] = byteregistrs[(NumberElements - 18) / 4][1];
-			byteregistrs[NumberRegistr / 4][2] = byteregistrs[(NumberElements - 18) / 4][2];
-			byteregistrs[NumberRegistr / 4][3] = byteregistrs[(NumberElements - 18) / 4][3];
+			byteregistrs[Registr][0] = byteregistrs[(NumberElements-22) / 4][0];
+			byteregistrs[Registr][1] = byteregistrs[(NumberElements - 22) / 4][1];
+			byteregistrs[Registr][2] = byteregistrs[(NumberElements - 22) / 4][2];
+			byteregistrs[Registr][3] = byteregistrs[(NumberElements - 22) / 4][3];
 			string bytes[4] = { "White", "White", "White", "White" };
 			ByteText(bytes);
 			}
@@ -432,7 +481,7 @@ int main(int, char**)
 		}
 
 	}
-	else if (NumberRegistr % 4 == 1)
+	else if (bitysInRegistr == 2 and NumberCommand < 2)
 	{
 		if (chet >= 9 and chet <= 13.5 and NumberCommand == 0)
 		{
@@ -446,7 +495,7 @@ int main(int, char**)
 		}
 		else if (chet >= 9 and chet <= 13.5 and NumberCommand == 1)
 		{
-			byteregistrs[NumberRegistr / 4][3] = znachbyte1;
+			byteregistrs[Registr][3] = znachbyte1;
 			string bytes[4] = { "Gray", "Gray", "Blink", "White" };
 			ByteText(bytes);
 		}
@@ -454,7 +503,7 @@ int main(int, char**)
 			chet = 0.0f;
 			timer = 0.0f;
 			isBlinking = !isBlinking;
-			byteregistrs[NumberRegistr / 4][2] = znachbyte2;
+			byteregistrs[Registr][2] = znachbyte2;
 			ImGui::BeginChild("byte1", ImVec2(40, 40), true);
 			string bytes[4] = { "Gray", "Gray", "White", "White" };
 			ByteText(bytes);
@@ -463,8 +512,8 @@ int main(int, char**)
 			chet = 0.0f;
 			timer = 0.0f;
 			isBlinking = !isBlinking;
-			byteregistrs[NumberRegistr / 4][2] = adresbyte3;
-			byteregistrs[NumberRegistr / 4][3] = adresbyte4;
+			byteregistrs[Registr][2] = ElementsCommands[NumberElementCommands][3];
+			byteregistrs[Registr][3] = ElementsCommands[NumberElementCommands][4];
 			string bytes[4] = { "Gray", "Gray", "White", "White" };
 			ByteText(bytes);
 		}
@@ -484,7 +533,7 @@ int main(int, char**)
 			ByteText(bytes);
 		}
 	}
-	else if (NumberRegistr % 4 == 2)
+	else if (NumberRegistr % 4 == 2 and NumberCommand < 2 and bitysInRegistr != 2)
 		{
 			if (NumberCommand == 0 and error == 1)
 			{
@@ -501,7 +550,7 @@ int main(int, char**)
 				chet = 0.0f;
 				timer = 0.0f;
 				isBlinking = !isBlinking;
-				byteregistrs[NumberRegistr / 4][2] = znachbyte1;
+				byteregistrs[Registr][2] = znachbyte1;
 				string bytes[4] = { "Gray", "Gray", "White", "Gray" };
 				ByteText(bytes);
 			}
@@ -521,7 +570,7 @@ int main(int, char**)
 				ByteText(bytes);
 			}
 		}
-		else if (NumberRegistr % 4 == 3)
+		else if (NumberRegistr % 4 == 3 and NumberCommand < 2 and bitysInRegistr!=2)
 		{
 			if (NumberCommand == 0 and error==1)
 			{
@@ -537,7 +586,7 @@ int main(int, char**)
 				chet = 0.0f;
 				timer = 0.0f;
 				isBlinking = !isBlinking;
-				byteregistrs[NumberRegistr / 4][3] = znachbyte1;
+				byteregistrs[Registr][3] = znachbyte1;
 				string bytes[4] = { "Gray", "Gray", "Gray", "White" };
 				ByteText(bytes);
 			}
@@ -557,36 +606,327 @@ int main(int, char**)
 				ByteText(bytes);
 			}
 		}
-	ImGui::SetNextItemWidth(ImGui::GetWindowWidth() * 0.15f);
-	ImGui::Combo((const char*)u8"Выбрать команду", &NumberCommand, Commads, IM_ARRAYSIZE(Commads));
+		else if (NumberCommand == 4)
+		{
+			if (chet >= 4.5 and chet <= 9)
+			{
+				NumberRegistr = 0;
+				string bytes[4] = { "White", "White", "White", "Blink" };
+				ByteText(bytes);
+			}
+			else if (chet >= 9 and chet <= 13.5)
+			{
+				byteregistrs[Registr][3] = znachbyte1;
+				string bytes[4] = { "White", "White", "Blink", "White" };
+				ByteText(bytes);
+			}
+			else if (chet >= 13.5 and chet <= 18)
+			{
+				byteregistrs[Registr][2] = znachbyte2;
+				string bytes[4] = { "White", "Blink", "White", "White" };
+				ByteText(bytes);
+			}
+			else if (chet >= 18 and chet <= 22.5)
+			{
+				byteregistrs[Registr][1] = znachbyte3;
+				string bytes[4] = { "Blink", "White", "White", "White" };
+				ByteText(bytes);
+			}
+			else if (chet >= 22.5) {
+				chet = 0.0f;
+				timer = 0.0f;
+				isBlinking = !isBlinking;
+				byteregistrs[Registr][0] = znachbyte4;
+
+				if (!DF) AdresHex = convertStringtoHex((byteregistrs[4][0] + byteregistrs[4][1] + byteregistrs[4][2] + byteregistrs[4][3])) + 4;
+				else AdresHex = convertStringtoHex((byteregistrs[4][0] + byteregistrs[4][1] + byteregistrs[4][2] + byteregistrs[4][3])) - 4;
+				resultString = convertHextoString(AdresHex);
+				if (!DF and resultString.size() > 8) resultString = convertHextoString(convertStringtoHex(resultString) - convertStringtoHex("FFFFFFFF") - 1);
+				else if (DF and resultString.size() > 8) resultString = convertHextoString(convertStringtoHex(resultString) + convertStringtoHex("FFFFFFFF") + 1);
+				while (resultString.size() < 8) resultString = "0" + resultString;
+				byteregistrs[4][0] = resultString.substr(0, 2);
+				byteregistrs[4][1] = resultString.substr(2, 2);
+				byteregistrs[4][2] = resultString.substr(4, 2);
+				byteregistrs[4][3] = resultString.substr(6, 2);
+
+				string bytes[4] = { "White", "White", "White", "White" };
+				ByteText(bytes);
+			}
+			else
+			{
+				string bytes[4] = { "White", "White", "White", "White" };
+				ByteText(bytes);
+			}
+		}
+		else if (NumberCommand == 3)
+		{
+			if (chet >= 4.5 and chet <= 9)
+			{
+				NumberRegistr = 0;
+				string bytes[4] = { "Gray", "Gray", "White", "Blink" };
+				ByteText(bytes);
+			}
+			else if (chet >= 9 and chet <= 13.5)
+			{
+				byteregistrs[Registr][3] = znachbyte1;
+				string bytes[4] = { "Gray", "Gray", "Blink", "White" };
+				ByteText(bytes);
+			}
+			else if (chet >= 13.5) 
+			{
+				chet = 0.0f;
+				timer = 0.0f;
+				isBlinking = !isBlinking;
+				byteregistrs[Registr][2] = znachbyte2;
+
+				if (!DF) AdresHex = convertStringtoHex((byteregistrs[4][0] + byteregistrs[4][1] + byteregistrs[4][2] + byteregistrs[4][3])) + 2;
+				else AdresHex = convertStringtoHex((byteregistrs[4][0] + byteregistrs[4][1] + byteregistrs[4][2] + byteregistrs[4][3])) - 2;
+				resultString = convertHextoString(AdresHex);
+				if (!DF and resultString.size() > 8) resultString = convertHextoString(convertStringtoHex(resultString) - convertStringtoHex("FFFFFFFF") - 1);
+				else if (DF and resultString.size() > 8) resultString = convertHextoString(convertStringtoHex(resultString) + convertStringtoHex("FFFFFFFF") + 1);
+				while (resultString.size() < 8) resultString = "0" + resultString;
+				byteregistrs[4][0] = resultString.substr(0, 2);
+				byteregistrs[4][1] = resultString.substr(2, 2);
+				byteregistrs[4][2] = resultString.substr(4, 2);
+				byteregistrs[4][3] = resultString.substr(6, 2);
+
+				string bytes[4] = { "Gray", "Gray", "White", "White" };
+				ByteText(bytes);
+			}
+			else
+			{
+				string bytes[4] = { "Gray", "Gray", "White", "White" };
+				ByteText(bytes);
+			}
+		}
+		else if (NumberCommand == 2)
+		{
+			if (chet >= 4.5 and chet <= 9)
+			{
+				NumberRegistr = 0;
+				string bytes[4] = { "Gray", "Gray", "Gray", "Blink" };
+				ByteText(bytes);
+			}
+			else if (chet >= 9)
+			{
+				chet = 0.0f;
+				timer = 0.0f;
+				isBlinking = !isBlinking;
+				byteregistrs[Registr][3] = znachbyte1;
+
+				if (!DF) AdresHex = convertStringtoHex((byteregistrs[4][0] + byteregistrs[4][1] + byteregistrs[4][2] + byteregistrs[4][3])) + 1;
+				else AdresHex = convertStringtoHex((byteregistrs[4][0] + byteregistrs[4][1] + byteregistrs[4][2] + byteregistrs[4][3])) - 1;
+				resultString = convertHextoString(AdresHex);
+				if (!DF and resultString.size() > 8) resultString = "00000000";
+				else if (DF and resultString.size() > 8) resultString = "FFFFFFFF";
+				while (resultString.size() < 8) resultString = "0" + resultString;
+				byteregistrs[4][0] = resultString.substr(0, 2);
+				byteregistrs[4][1] = resultString.substr(2, 2);
+				byteregistrs[4][2] = resultString.substr(4, 2);
+				byteregistrs[4][3] = resultString.substr(6, 2);
+				string bytes[4] = { "Gray", "Gray", "Gray", "White" };
+				ByteText(bytes);
+			}
+			else
+			{
+				string bytes[4] = { "Gray", "Gray", "Gray", "White" };
+				ByteText(bytes);
+			}
+		}
+		else if (NumberCommand == 7)
+		{
+			if (chet >= 4.5 and chet <= 9)
+			{
+				NumberRegistr = 0;
+				string bytes[4] = { "White", "White", "White", "Blink" };
+				ByteText(bytes);
+			}
+			else if (chet >= 9 and chet <= 13.5)
+			{
+				znachbyte1 = byteregistrs[Registr][3];
+				string bytes[4] = { "White", "White", "Blink", "White" };
+				ByteText(bytes);
+			}
+			else if (chet >= 13.5 and chet <= 18)
+			{
+				znachbyte2 = byteregistrs[Registr][2];
+				string bytes[4] = { "White", "Blink", "White", "White" };
+				ByteText(bytes);
+			}
+			else if (chet >= 18 and chet <= 22.5)
+			{
+				znachbyte3 = byteregistrs[Registr][1];
+				string bytes[4] = { "Blink", "White", "White", "White" };
+				ByteText(bytes);
+			}
+			else if (chet >= 22.5) {
+				chet = 0.0f;
+				timer = 0.0f;
+				isBlinking = !isBlinking;
+				NumberTypePeremennoi = 0;
+				znachbyte4 = byteregistrs[Registr][0];
+				peremennai = znachbyte4 + znachbyte3 + znachbyte2 + znachbyte1;
+				predZnach[0] = byteregistrs[5][0];
+				predZnach[1] = byteregistrs[5][1];
+				predZnach[2] = byteregistrs[5][2];
+				predZnach[3] = byteregistrs[5][3];
+				if (!DF) AdresHex = convertStringtoHex((byteregistrs[5][0] + byteregistrs[5][1] + byteregistrs[5][2] + byteregistrs[5][3])) + 4;
+				else AdresHex = convertStringtoHex((byteregistrs[5][0] + byteregistrs[5][1] + byteregistrs[5][2] + byteregistrs[5][3])) - 4;
+				resultString = convertHextoString(AdresHex);
+				if (!DF and resultString.size() > 8) resultString = convertHextoString(convertStringtoHex(resultString) - convertStringtoHex("FFFFFFFF") - 1);
+				else if (DF and resultString.size() > 8) resultString = convertHextoString(convertStringtoHex(resultString) + convertStringtoHex("FFFFFFFF") + 1);
+				while (resultString.size() < 8) resultString = "0" + resultString;
+				byteregistrs[5][0] = resultString.substr(0, 2);
+				byteregistrs[5][1] = resultString.substr(2, 2);
+				byteregistrs[5][2] = resultString.substr(4, 2);
+				byteregistrs[5][3] = resultString.substr(6, 2);
+
+				string bytes[4] = { "White", "White", "White", "White" };
+				ByteText(bytes);
+			}
+			else
+			{
+				string bytes[4] = { "White", "White", "White", "White" };
+				ByteText(bytes);
+			}
+			}
+		else if (NumberCommand == 6)
+		{
+			if (chet >= 4.5 and chet <= 9)
+			{
+				NumberRegistr = 0;
+				string bytes[4] = { "Gray", "Gray", "White", "Blink" };
+				ByteText(bytes);
+			}
+			else if (chet >= 9 and chet <= 13.5)
+			{
+				znachbyte1 = byteregistrs[Registr][3];
+				string bytes[4] = { "Gray", "Gray", "Blink", "White" };
+				ByteText(bytes);
+			}
+			else if (chet >= 13.5)
+			{
+				chet = 0.0f;
+				timer = 0.0f;
+				isBlinking = !isBlinking;
+				NumberTypePeremennoi = 1;
+				znachbyte2 = byteregistrs[Registr][2];
+				znachbyte3, znachbyte4 = "";
+				peremennai = znachbyte2 + znachbyte1;
+				predZnach[0] = byteregistrs[5][0];
+				predZnach[1] = byteregistrs[5][1];
+				predZnach[2] = byteregistrs[5][2];
+				predZnach[3] = byteregistrs[5][3];
+				if (!DF) AdresHex = convertStringtoHex((byteregistrs[5][0] + byteregistrs[5][1] + byteregistrs[5][2] + byteregistrs[5][3])) + 2;
+				else AdresHex = convertStringtoHex((byteregistrs[5][0] + byteregistrs[5][1] + byteregistrs[5][2] + byteregistrs[5][3])) - 2;
+				resultString = convertHextoString(AdresHex);
+				if (!DF and resultString.size() > 8) resultString = convertHextoString(convertStringtoHex(resultString) - convertStringtoHex("FFFFFFFF") - 1);
+				else if (DF and resultString.size() > 8) resultString = convertHextoString(convertStringtoHex(resultString) + convertStringtoHex("FFFFFFFF") + 1);
+				while (resultString.size() < 8) resultString = "0" + resultString;
+				byteregistrs[5][0] = resultString.substr(0, 2);
+				byteregistrs[5][1] = resultString.substr(2, 2);
+				byteregistrs[5][2] = resultString.substr(4, 2);
+				byteregistrs[5][3] = resultString.substr(6, 2);
+
+				string bytes[4] = { "Gray", "Gray", "White", "White" };
+				ByteText(bytes);
+			}
+			else
+			{
+				string bytes[4] = { "Gray", "Gray", "White", "White" };
+				ByteText(bytes);
+			}
+		}
+		else if (NumberCommand == 5)
+		{
+			if (chet >= 4.5 and chet <= 9)
+			{
+				NumberRegistr = 0;
+				string bytes[4] = { "Gray", "Gray", "Gray", "Blink" };
+				ByteText(bytes);
+			}
+			else if (chet >= 9)
+			{
+				chet = 0.0f;
+				timer = 0.0f;
+				isBlinking = !isBlinking;
+				NumberTypePeremennoi = 2;
+				znachbyte2, znachbyte3, znachbyte4 = "";
+				znachbyte1 = byteregistrs[Registr][3];
+				peremennai = znachbyte1;
+				predZnach[0] = byteregistrs[5][0];
+				predZnach[1] = byteregistrs[5][1];
+				predZnach[2] = byteregistrs[5][2];
+				predZnach[3] = byteregistrs[5][3];
+				if (!DF) AdresHex = convertStringtoHex((byteregistrs[5][0] + byteregistrs[5][1] + byteregistrs[5][2] + byteregistrs[5][3])) + 1;
+				else AdresHex = convertStringtoHex((byteregistrs[5][0] + byteregistrs[5][1] + byteregistrs[5][2] + byteregistrs[5][3])) - 1;
+				resultString = convertHextoString(AdresHex);
+				if (!DF and resultString.size() > 8) resultString = "00000000";
+				else if (DF and resultString.size() > 8) resultString = "FFFFFFFF";
+				while (resultString.size() < 8) resultString = "0" + resultString;
+				byteregistrs[5][0] = resultString.substr(0, 2);
+				byteregistrs[5][1] = resultString.substr(2, 2);
+				byteregistrs[5][2] = resultString.substr(4, 2);
+				byteregistrs[5][3] = resultString.substr(6, 2);
+
+				string bytes[4] = { "Gray", "Gray", "Gray", "White" };
+				ByteText(bytes);
+			}
+			else
+			{
+				string bytes[4] = { "Gray", "Gray", "Gray", "White" };
+				ByteText(bytes);
+			}
+		}
+		else if (NumberCommand == 8 or NumberCommand == 9)
+		{
+			string bytes[4] = { "Gray", "Gray", "Gray", "Gray" };
+			ByteText(bytes);
+		}
+	ImGui::TextColored(ImVec4(red1, green1, blue1, 1), (const char*)u8"Выбрать команду:");
 	ImGui::SameLine();
+	ImGui::SetNextItemWidth(ImGui::GetWindowWidth() * 0.18f);
+	ImGui::Combo("##3211", &NumberCommand, Commads, IM_ARRAYSIZE(Commads));
+	if (NumberCommand < 2) NumberElementCommands = 0;
+	else NumberElementCommands = 1;
 	ImGui::PushStyleColor(ImGuiCol_Button, ImVec4(0, 0.5, 0, 1));
 	ImGui::PushStyleColor(ImGuiCol_Text, ImVec4(1, 1, 1, 1.0f));
-	if (ImGui::Button((const char*)u8"Активировать команду"))
+	if (ImGui::Button((const char*)u8"Выполнить команду") and !isBlinking)
 	{
-		if ((NumberElements - 2) % 4 != 0 and NumberElements >= 18) error = 8;
+		if ((NumberElements - 2) % 4 != 0 and NumberElements >= 26 and NumberElements != 40) error = 8;
 		else
 		{
 			error = 0;
 			if (NumberCommand == -1) error = 6;
 			else if (NumberCommand == 0)
 			{
-				if ((NumberRegistr % 4 == 0 or NumberRegistr % 4 == 1) and (NumberElements <= 1 or (NumberElements >= 18 and (NumberElements - 2) % 4 == 0))) isBlinking = !isBlinking;
-				else if (NumberElements > 1 and NumberElements < 18) error = 7;
-				else if (NumberElements >= 18 and (NumberElements - 2) % 4 != 0) error = 8;
+				if ((bitysInRegistr == 4 or bitysInRegistr == 2) and (NumberElements <= 1 or NumberElements >= 26)) isBlinking = !isBlinking;
+				else if (NumberElements > 1 and NumberElements < 22) error = 7;
+				else if (NumberElements >= 26 and (NumberElements - 2) % 4 != 0) error = 8;
 				else error = 1;
 			}
 
-			else
+			else if (NumberCommand == 1)
 			{
-				if (otchet == 4 or ((NumberElements >= 18 and otchet != 0) and NumberRegistr%4==0) or ((NumberElements >= 18 and otchet == 3) and NumberRegistr % 4 == 1)) error = 9;
-				else if (NumberRegistr % 4 == 0 and ((NumberTypePeremennoi == 0 and NumberElements <= 1) or (((NumberElements - 2) % 4 == 0) and NumberElements < 18) or (NumberElements >= 18 and otchet == 0))) isBlinking = !isBlinking;
-				else if (NumberRegistr % 4 == 0 and ((NumberTypePeremennoi != 0 and NumberElements <= 1) or ((NumberElements - 2) % 4 != 0 and NumberElements<18) )) error = 3;
-				else if (NumberRegistr % 4 == 1 and ((NumberTypePeremennoi == 1 and NumberElements <= 1) or ((NumberElements - 2) % 4 == 1 and NumberElements < 18) or (NumberElements >= 18 and otchet != 3))) isBlinking = !isBlinking;
-				else if (NumberRegistr % 4 == 1 and ((NumberTypePeremennoi == 0 and NumberElements <= 1) or ((NumberElements - 2) % 4 == 0 and NumberElements < 18))) error = 4;
-				else if (NumberRegistr % 4 == 1 and ((NumberTypePeremennoi == 2 and NumberElements <= 1) or ((NumberElements - 2) % 4 >= 2 and NumberElements < 18))) error = 3;
-				else if ((NumberRegistr % 4 == 2 or NumberRegistr % 4 == 3) and ((NumberTypePeremennoi == 2 and NumberElements <= 1) or ((NumberElements - 2) % 4 >= 2 and NumberElements < 18) or NumberElements >= 18)) isBlinking = !isBlinking;
+				if (otchet == 4 or ((NumberElements >= 26 and otchet != 0) and bitysInRegistr == 4) or ((NumberElements >= 26 and otchet == 3) and NumberRegistr % 4 == 1)) error = 9;
+				else if (bitysInRegistr == 4 and ((NumberTypePeremennoi == 0 and NumberElements <= 1) or ((NumberElements - 2) % 4 == 0) or (NumberElements >= 26 and otchet == 0))) isBlinking = !isBlinking;
+				else if (bitysInRegistr == 4 and ((NumberTypePeremennoi != 0 and NumberElements <= 1) or ((NumberElements - 2) % 4 != 0))) error = 3;
+				else if (bitysInRegistr == 2 and ((NumberTypePeremennoi == 1 and NumberElements <= 1) or ((NumberElements - 2) % 4 == 1) or (NumberElements >= 26 and otchet != 3))) isBlinking = !isBlinking;
+				else if (bitysInRegistr == 2 and ((NumberTypePeremennoi == 0 and NumberElements <= 1) or ((NumberElements - 2) % 4 == 0))) error = 4;
+				else if (bitysInRegistr == 2 and ((NumberTypePeremennoi == 2 and NumberElements <= 1) or ((NumberElements - 2) % 4 >= 2))) error = 3;
+				else if (bitysInRegistr == 1 and ((NumberTypePeremennoi == 2 and NumberElements <= 1) or ((NumberElements - 2) % 4 >= 2) or NumberElements >= 26)) isBlinking = !isBlinking;
 				else error = 4;
+			}
+			else if (NumberCommand >= 2 and NumberCommand <= 4) 
+			{
+				if (NumberCommand == 4 and znachbyte4 != "") isBlinking = !isBlinking;
+				else if (NumberCommand == 3 and znachbyte2 != "") isBlinking = !isBlinking;
+				else if (NumberCommand == 2 and znachbyte1 != "") isBlinking = !isBlinking;
+				else error = 9;
+			}
+			else if (NumberCommand >= 5 and NumberCommand <= 9)
+			{
+				isBlinking = !isBlinking;
 			}
 		}
 	}
@@ -602,11 +942,11 @@ int main(int, char**)
 		{
 			BlinkingText("LEA");
 			ImGui::SameLine();
-			BlinkingText((const char*)registr.c_str());
+			BlinkingText((registr + ",").c_str());
 			ImGui::SameLine();
 			ImGui::SetNextItemWidth(ImGui::GetWindowWidth() * 0.15f);
-			if (!isBlinking) ImGui::Combo((const char*)u8"##hiddencombo2", &NumberElements, Elements, IM_ARRAYSIZE(Elements));
-			else BlinkingText((const char*)Elements[NumberElements]);
+			if (!isBlinking) ImGui::Combo((const char*)u8" ", &FakeNumberElements, FakeElements, IM_ARRAYSIZE(FakeElements));
+			else BlinkingText((const char*)FakeElements[FakeNumberElements]);
 		}
 		else
 		{
@@ -615,12 +955,12 @@ int main(int, char**)
 			ImGui::TextColored(ImVec4(red1, green1, blue1, 1),(const char*)registr.c_str());
 			ImGui::SameLine();
 			ImGui::SetNextItemWidth(ImGui::GetWindowWidth() * 0.15f);
-			if (!isBlinking) ImGui::Combo((const char*)u8"##Combo", &NumberElements, Elements, IM_ARRAYSIZE(Elements));
-			else ImGui::TextColored(ImVec4(red1, green1, blue1, 1), (const char*)Elements[NumberElements]);
+			if (!isBlinking) ImGui::Combo((const char*)u8" ", &FakeNumberElements, FakeElements, IM_ARRAYSIZE(FakeElements));
+			else ImGui::TextColored(ImVec4(red1, green1, blue1, 1), (const char*)FakeElements[FakeNumberElements]);
 		}
 
 	}
-	if (NumberCommand == 1)
+	else if (NumberCommand == 1)
 	{
 		if (redadres != 1) {
 			redadres = 0.5;
@@ -631,60 +971,118 @@ int main(int, char**)
 		{
 			BlinkingText("MOV");
 			ImGui::SameLine();
-			BlinkingText((const char*)registr.c_str());
+			BlinkingText((registr + ",").c_str());
 			ImGui::SameLine();
 			ImGui::SetNextItemWidth(ImGui::GetWindowWidth() * 0.15f);
-			if (!isBlinking) ImGui::Combo((const char*)u8"##Combo2", &NumberElements, Elements, IM_ARRAYSIZE(Elements));
-			else BlinkingText((const char*)Elements[NumberElements]);
+			if (!isBlinking) ImGui::Combo((const char*)u8" ", &FakeNumberElements, FakeElements, IM_ARRAYSIZE(FakeElements));
+			else BlinkingText((const char*)FakeElements[FakeNumberElements]);
 	
 		}
 		else
 		{
 			ImGui::TextColored(ImVec4(red1, green1, blue1, 1),"MOV");
 			ImGui::SameLine();
-			ImGui::TextColored(ImVec4(red1, green1, blue1, 1),(const char*)registr.c_str());
+			ImGui::TextColored(ImVec4(red1, green1, blue1, 1), (const char*)registr.c_str());
 			ImGui::SameLine();
 			ImGui::SetNextItemWidth(ImGui::GetWindowWidth() * 0.15f);
-			if (!isBlinking) ImGui::Combo((const char*)u8"##Combo3", &NumberElements, Elements, IM_ARRAYSIZE(Elements));
-			else ImGui::TextColored(ImVec4(red1, green1, blue1, 1),(const char*)Elements[NumberElements]);
+			if (!isBlinking) ImGui::Combo((const char*)u8" ", &FakeNumberElements, FakeElements, IM_ARRAYSIZE(FakeElements));
+			else ImGui::TextColored(ImVec4(red1, green1, blue1, 1),(const char*)FakeElements[FakeNumberElements]);
 	
 		}
 	}
+	else if (NumberCommand >= 2 and NumberCommand <= 7)
+	{
+		if (redadres != 1) {
+			redadres = red1;
+			greenadres = green1;
+			blueadres = blue1;
+		}
+		if (chet >= 0 and chet <= 4.5)
+		{
+			BlinkingText(Commads[NumberCommand]);
+		}
+		else
+		{
+			ImGui::TextColored(ImVec4(red1, green1, blue1, 1), Commads[NumberCommand]);
+		}
+	}
+	else if (NumberCommand >= 8 and NumberCommand <= 9)
+	{
+		if (redadres != 1) {
+			redadres = 0.5;
+			greenadres = 0.5;
+			blueadres = 0.5;
+		}
+		if (chet >= 0 and chet <= 4.5)
+		{
+			BlinkingText(Commads[NumberCommand]);
+		}
+		else
+		{
+			ImGui::TextColored(ImVec4(red1, green1, blue1, 1), Commads[NumberCommand]);
+		}
+	}
+
 	if (!isBlinking)
 	{
-		if (NumberElements > 1 and NumberElements < 18)
+		if (NumberCommand >= 2 and NumberCommand <= 7)
 		{
-			otchet = 0;
-			znachbyte1 = byteregistrs[(NumberElements - 2) / 4][3];
-			znachbyte2 = byteregistrs[(NumberElements - 2) / 4][2];
-			znachbyte3 = byteregistrs[(NumberElements - 2) / 4][1];
-			znachbyte4 = byteregistrs[(NumberElements - 2) / 4][0];
+			NumberElements = -1;
+			//NumberTypePeremennoi = -1;
 		}
-		else if (NumberElements >= 18)
+		if (NumberElements > 1 and NumberElements < 26)
 		{
-			if (NumberTypePeremennoi == 0)
+			int znachOperativ = (NumberElements - 2) / 4;
+			otchet = 0;
+			if ((NumberElements - 2) % 4 == 2 and NumberElements < 20) znachbyte1 = byteregistrs[znachOperativ][2];
+			else
 			{
-				if (adresbyte1 == byteregistrs[(NumberElements - 18) / 4][0] and adresbyte2 == byteregistrs[(NumberElements - 18) / 4][1] and adresbyte3 == byteregistrs[(NumberElements - 18) / 4][2] and adresbyte4 == byteregistrs[(NumberElements - 18) / 4][3])
+				znachbyte1 = byteregistrs[znachOperativ][3];
+				znachbyte2 = byteregistrs[znachOperativ][2];
+				znachbyte3 = byteregistrs[znachOperativ][1];
+				znachbyte4 = byteregistrs[znachOperativ][0];
+			}
+		}
+		else if (NumberElements >= 26 or (NumberCommand >=2 and NumberCommand <=7))
+		{
+			if ((NumberTypePeremennoi == 0 and NumberCommand == 1) or NumberCommand == 4 or NumberCommand == 7)
+			{
+				
+				int KosAddress = (NumberElements - 26) / 4;
+				if (NumberCommand == 7) KosAddress = 5;
+				else if (NumberCommand == 4) KosAddress = 4;
+				if ((NumberCommand != 7 and ElementsCommands[NumberElementCommands][1] == byteregistrs[KosAddress][0] and ElementsCommands[NumberElementCommands][2] == byteregistrs[KosAddress][1] and ElementsCommands[NumberElementCommands][3] == byteregistrs[KosAddress][2] and ElementsCommands[NumberElementCommands][4] == byteregistrs[KosAddress][3])
+					or (NumberCommand == 7 and ElementsCommands[NumberElementCommands][1] == predZnach[0] and ElementsCommands[NumberElementCommands][2] == predZnach[1] and ElementsCommands[NumberElementCommands][3] == predZnach[2] and ElementsCommands[NumberElementCommands][4] == predZnach[3]))
 				{
 					otchet = 0;
-					znachbyte4 = peremennai.substr(0, 2);
-					znachbyte3 = peremennai.substr(2, 2);
-					znachbyte2 = peremennai.substr(4, 2);
-					znachbyte1 = peremennai.substr(6, 2);
+					if (peremennai.size() == 8)
+					{
+						znachbyte4 = peremennai.substr(0, 2);
+						znachbyte3 = peremennai.substr(2, 2);
+						znachbyte2 = peremennai.substr(4, 2);
+						znachbyte1 = peremennai.substr(6, 2);
+					}
+					else if (peremennai.size() == 4)
+					{
+						znachbyte2 = peremennai.substr(0, 2);
+						znachbyte1 = peremennai.substr(2, 2);
+						znachbyte4 = "";
+						znachbyte3 = "";
+					}
+					else
+					{
+						znachbyte1 = peremennai.substr(0, 2);
+						znachbyte4 = "";
+						znachbyte3 = "";
+						znachbyte2 = "";
+					}
 				}
 				else
 				{
-					glavregistr = byteregistrs[(NumberElements - 18) / 4][0] + byteregistrs[(NumberElements - 18) / 4][1] + byteregistrs[(NumberElements - 18) / 4][2] + byteregistrs[(NumberElements - 18) / 4][3];
-					unsigned long long hexadres;
-					std::stringstream sss;
-					sss << std::hex << adres;
-					sss >> hexadres;
-					unsigned long long hexregistr;
-					std::stringstream sss1;
-					sss1 << std::hex << glavregistr;
-					sss1 >> hexregistr;
+					glavregistr = byteregistrs[KosAddress][0] + byteregistrs[KosAddress][1] + byteregistrs[KosAddress][2] + byteregistrs[KosAddress][3];
+					if (NumberCommand == 7) glavregistr = predZnach[0] + predZnach[1] + predZnach[2] + predZnach[3];
 					int otchet1;
-					otchet1 = hexregistr - hexadres;
+					otchet1 = convertStringtoHex(ElementsCommands[NumberElementCommands][0]) - convertStringtoHex(glavregistr);
 					if (otchet1 == 1)
 					{
 						otchet = 1;
@@ -719,28 +1117,36 @@ int main(int, char**)
 					}
 				}
 			}
-			else if (NumberTypePeremennoi == 2)
+			else if ((NumberTypePeremennoi == 2 and NumberCommand == 1) or NumberCommand == 2 or NumberCommand == 5)
 			{
-				if (adresbyte1 == byteregistrs[(NumberElements - 18) / 4][0] and adresbyte2 == byteregistrs[(NumberElements - 18) / 4][1] and adresbyte3 == byteregistrs[(NumberElements - 18) / 4][2] and adresbyte4 == byteregistrs[(NumberElements - 18) / 4][3])
-				{
-					otchet = 3;
-					znachbyte4 = "";
-					znachbyte3 = "";
-					znachbyte2 = "";
-					znachbyte1 = peremennai.substr(0, 2);
-				}
-				else
-				{
-					otchet = 4;
-					znachbyte4 = "";
-					znachbyte3 = "";
-					znachbyte2 = "";
-					znachbyte1 = "";
-				}
+				int KosAddress = (NumberElements - 26) / 4;
+				if (NumberCommand == 5) KosAddress = 5;
+				else if (NumberCommand == 2) KosAddress = 4;
+					if ((NumberCommand != 5 and ElementsCommands[NumberElementCommands][1] == byteregistrs[KosAddress][0] and ElementsCommands[NumberElementCommands][2] == byteregistrs[KosAddress][1] and ElementsCommands[NumberElementCommands][3] == byteregistrs[KosAddress][2] and ElementsCommands[NumberElementCommands][4] == byteregistrs[KosAddress][3])
+						or (NumberCommand == 5 and ElementsCommands[NumberElementCommands][1] == predZnach[0] and ElementsCommands[NumberElementCommands][2] == predZnach[1] and ElementsCommands[NumberElementCommands][3] == predZnach[2] and ElementsCommands[NumberElementCommands][4] == predZnach[3]))
+					{
+						otchet = 3;
+						znachbyte4 = "";
+						znachbyte3 = "";
+						znachbyte2 = "";
+						znachbyte1 = peremennai.substr(0, 2);
+					}
+					else
+					{
+						otchet = 4;
+						znachbyte4 = "";
+						znachbyte3 = "";
+						znachbyte2 = "";
+						znachbyte1 = "";
+					}
 			}
-			else if (NumberTypePeremennoi == 1)
+			else if ((NumberTypePeremennoi == 1 and NumberCommand == 1) or NumberCommand == 3 or NumberCommand == 6)
 			{
-				if (adresbyte1 == byteregistrs[(NumberElements - 18) / 4][0] and adresbyte2 == byteregistrs[(NumberElements - 18) / 4][1] and adresbyte3 == byteregistrs[(NumberElements - 18) / 4][2] and adresbyte4 == byteregistrs[(NumberElements - 18) / 4][3])
+				int KosAddress = (NumberElements - 26) / 4;
+				if (NumberCommand == 6) KosAddress = 5;
+				else if (NumberCommand == 3) KosAddress = 4;
+				if ((NumberCommand != 6 and ElementsCommands[NumberElementCommands][1] == byteregistrs[KosAddress][0] and ElementsCommands[NumberElementCommands][2] == byteregistrs[KosAddress][1] and ElementsCommands[NumberElementCommands][3] == byteregistrs[KosAddress][2] and ElementsCommands[NumberElementCommands][4] == byteregistrs[KosAddress][3])
+					or (NumberCommand == 6 and ElementsCommands[NumberElementCommands][1] == predZnach[0] and ElementsCommands[NumberElementCommands][2] == predZnach[1] and ElementsCommands[NumberElementCommands][3] == predZnach[2] and ElementsCommands[NumberElementCommands][4] == predZnach[3]))
 				{
 					otchet = 2;
 					znachbyte4 = "";
@@ -750,17 +1156,11 @@ int main(int, char**)
 				}
 				else
 				{
-					glavregistr = byteregistrs[(NumberElements - 18) / 4][0] + byteregistrs[(NumberElements - 18) / 4][1] + byteregistrs[(NumberElements - 18) / 4][2] + byteregistrs[(NumberElements - 18) / 4][3];
-					unsigned long long hexadres;
-					std::stringstream sss;
-					sss << std::hex << adres;
-					sss >> hexadres;
-					unsigned long long hexregistr;
-					std::stringstream sss1;
-					sss1 << std::hex << glavregistr;
-					sss1 >> hexregistr;
+					glavregistr = byteregistrs[KosAddress][0] + byteregistrs[KosAddress][1] + byteregistrs[KosAddress][2] + byteregistrs[KosAddress][3];
+					if (NumberCommand == 6) glavregistr = predZnach[0] + predZnach[1] + predZnach[2] + predZnach[3];
 					int otchet1;
-					otchet1 = hexregistr - hexadres;
+					otchet1 = convertStringtoHex(ElementsCommands[NumberElementCommands][0]) - convertStringtoHex(glavregistr);
+
 					if (otchet1 == 1)
 					{
 						otchet = 3;
@@ -780,17 +1180,17 @@ int main(int, char**)
 				}
 			}
 		}
-		else
+		else 
 		{
 			otchet = 0;
-			if (NumberTypePeremennoi == 0)
+			if (peremennai.size() == 8)
 			{
 				znachbyte4 = peremennai.substr(0, 2);
 				znachbyte3 = peremennai.substr(2, 2);
 				znachbyte2 = peremennai.substr(4, 2);
 				znachbyte1 = peremennai.substr(6, 2);
 			}
-			else if (NumberTypePeremennoi == 1)
+			else if (peremennai.size() == 4)
 			{
 				znachbyte2 = peremennai.substr(0, 2);
 				znachbyte1 = peremennai.substr(2, 2);
@@ -806,25 +1206,23 @@ int main(int, char**)
 			}
 		}
 	}
+
+
 	ImGui::SetCursorPos(ImVec2(7, 200));
 	if (error != 2) {
 		redznach = red1;
 		greenznach = green1;
 		blueznach = blue1;
 	}
-	ImGui::PushStyleColor(ImGuiCol_Text, ImVec4(redznach, greenznach, blueznach, 1.0f));
-	ImGui::SetNextItemWidth(ImGui::GetWindowWidth() * 0.2f);
-	ImGui::InputText("##hidden1", bufznach, IM_ARRAYSIZE(bufznach), ImGuiInputTextFlags_CharsHexadecimal);
-	ImGui::PopStyleColor(1);
-	ImGui::SameLine();
-	if (ImGui::Button((const char*)u8"Ввести переменную х1"))
+	ImGui::TextColored(ImVec4(red1, green1, blue1, 1), " ");
+	if (ImGui::Button((const char*)u8"Ввести значение х1"))
 	{
 		peremennai = bufznach;
 		error = 0;
 		if (NumberTypePeremennoi == 0)
 		{
 			while (peremennai.size() < 8) peremennai = "0" + peremennai;
-			if (NumberRegistr % 4 == 0)
+			if (bitysInRegistr == 4)
 			{
 				znachbyte4 = peremennai.substr(0, 2);
 				znachbyte3 = peremennai.substr(2, 2);
@@ -857,101 +1255,121 @@ int main(int, char**)
 			else error = 2;
 		}
 	}
+	ImGui::SameLine();
+	ImGui::PushStyleColor(ImGuiCol_Text, ImVec4(redznach, greenznach, blueznach, 1.0f));
+	ImGui::SetNextItemWidth(ImGui::GetWindowWidth() * 0.2f);
+	ImGui::InputText("##hidden", bufznach, IM_ARRAYSIZE(bufznach), ImGuiInputTextFlags_CharsHexadecimal);
+	ImGui::PopStyleColor(1);
+
+	ImGui::TextColored(ImVec4(red1, green1, blue1, 1), (const char*)u8"Выбрать тип данных переменной x1");
 	ImGui::SetNextItemWidth(ImGui::GetWindowWidth() * 0.15f);
-	ImGui::Combo((const char*)u8"Выбрать тип данных переменной x1", &NumberTypePeremennoi, TypePeremennoi, IM_ARRAYSIZE(TypePeremennoi));
+	//ImGui::SameLine();
+	//ImGui::Combo("###hidden", &NumberTypePeremennoi, TypePeremennoi, IM_ARRAYSIZE(TypePeremennoi));
+	if (ImGui::Button((const char*)u8"DoubleWord")) NumberTypePeremennoi = 0;
+	ImGui::SameLine();
+	if (ImGui::Button((const char*)u8"Word")) NumberTypePeremennoi = 1;
+	ImGui::SameLine();
+	if (ImGui::Button((const char*)u8"Byte")) NumberTypePeremennoi = 2;
+
 	ImGui::TextColored(ImVec4(red1, green1, blue1, 1),"x1");
+	ImGui::SameLine();
+	ImGui::TextColored(ImVec4(red1, green1, blue1, 1), (TypePeremennoi[NumberTypePeremennoi]));
 	ImGui::SameLine();
 	std::transform(peremennai.begin(), peremennai.end(), peremennai.begin(),
 		[](unsigned char c) { return std::toupper(c); });
 	ImGui::TextColored(ImVec4(red1, green1, blue1, 1),peremennai.c_str());
-	ImGui::SameLine();
-	ImGui::TextColored(ImVec4(red1, green1, blue1, 1),(TypePeremennoi[NumberTypePeremennoi]));
 	ImGui::EndChild();
+
+
 	ImGui::SameLine(410, 0);
-	ImGui::BeginChild("Адрес ", ImVec2(115, 300), true);
+	ImGui::BeginChild("Адрес", ImVec2(120, 360), true);
 	ImGui::InputText("##hidden", bufaddress, IM_ARRAYSIZE(bufaddress), ImGuiInputTextFlags_CharsHexadecimal);
 	if (ImGui::Button((const char*)u8"Ввести адрес"))
 	{
-		adres = bufaddress;
+		ElementsCommands[NumberElementCommands][0] = bufaddress;
 		error = 0;
-		while (adres.size() < 8) adres = adres + "0";
-		adresbyte1 = adres.substr(0, 2);
-		adresbyte2 = adres.substr(2, 2);
-		adresbyte3 = adres.substr(4, 2);
-		adresbyte4 = adres.substr(6, 2);
+		while (ElementsCommands[NumberElementCommands][0].size() < 8) ElementsCommands[NumberElementCommands][0] = ElementsCommands[NumberElementCommands][0] + "0";
+		ElementsCommands[NumberElementCommands][1] = ElementsCommands[NumberElementCommands][0].substr(0, 2);
+		ElementsCommands[NumberElementCommands][2] = ElementsCommands[NumberElementCommands][0].substr(2, 2);
+		ElementsCommands[NumberElementCommands][3] = ElementsCommands[NumberElementCommands][0].substr(4, 2);
+		ElementsCommands[NumberElementCommands][4] = ElementsCommands[NumberElementCommands][0].substr(6, 2);
 	}
 	ImGui::TextColored(ImVec4(red1, green1, blue1, 1)," ");
 	ImGui::TextColored(ImVec4(red1, green1, blue1, 1)," ");
 	ImGui::TextColored(ImVec4(red1, green1, blue1, 1),(const char*)u8"Адрес");
-	std::transform(adresbyte1.begin(), adresbyte1.end(), adresbyte1.begin(),
+	std::transform(ElementsCommands[NumberElementCommands][1].begin(), ElementsCommands[NumberElementCommands][1].end(), ElementsCommands[NumberElementCommands][1].begin(),
 		[](unsigned char c) { return std::toupper(c); });
-	std::transform(adresbyte2.begin(), adresbyte2.end(), adresbyte2.begin(),
+	std::transform(ElementsCommands[NumberElementCommands][2].begin(), ElementsCommands[NumberElementCommands][2].end(), ElementsCommands[NumberElementCommands][2].begin(),
 		[](unsigned char c) { return std::toupper(c); });
-	std::transform(adresbyte3.begin(), adresbyte3.end(), adresbyte3.begin(),
+	std::transform(ElementsCommands[NumberElementCommands][3].begin(), ElementsCommands[NumberElementCommands][3].end(), ElementsCommands[NumberElementCommands][3].begin(),
 		[](unsigned char c) { return std::toupper(c); });
-	std::transform(adresbyte4.begin(), adresbyte4.end(), adresbyte4.begin(),
+	std::transform(ElementsCommands[NumberElementCommands][4].begin(), ElementsCommands[NumberElementCommands][4].end(), ElementsCommands[NumberElementCommands][4].begin(),
 		[](unsigned char c) { return std::toupper(c); });
-	if (NumberCommand == 0) {
-		if (chet >= 4.5 and chet <= 9  and NumberRegistr %4  == 0 and NumberElements<=1)
+	if (NumberCommand == 0) 
+	{
+		if (chet >= 4.5 and chet <= 9  and bitysInRegistr == 4 and NumberElements<=1)
 		{
 
-			BlinkingText(adresbyte1.c_str());
+			BlinkingText(ElementsCommands[NumberElementCommands][1].c_str());
 			ImGui::SameLine(0, 0);
-			BlinkingText(adresbyte2.c_str());
+			BlinkingText(ElementsCommands[NumberElementCommands][2].c_str());
 			ImGui::SameLine(0, 0);
-			BlinkingText(adresbyte3.c_str());
+			BlinkingText(ElementsCommands[NumberElementCommands][3].c_str());
 			ImGui::SameLine(0, 0);
-			BlinkingText(adresbyte4.c_str());
+			BlinkingText(ElementsCommands[NumberElementCommands][4].c_str());
 			ImGui::SameLine(0, 0);
 			ImGui::TextColored(ImVec4(red1, green1, blue1, 1),"h==>");
 		}
-		else if (chet >= 4.5 and chet <= 9 and NumberRegistr % 4 == 1)
+		else if (chet >= 4.5 and chet <= 9 and bitysInRegistr == 2)
 		{
-			ImGui::TextColored(ImVec4(red1, green1, blue1, 1), adresbyte1.c_str());
+			ImGui::TextColored(ImVec4(red1, green1, blue1, 1), ElementsCommands[NumberElementCommands][1].c_str());
 			ImGui::SameLine(0, 0);
-			ImGui::TextColored(ImVec4(red1, green1, blue1, 1), adresbyte2.c_str());
+			ImGui::TextColored(ImVec4(red1, green1, blue1, 1), ElementsCommands[NumberElementCommands][2].c_str());
 			ImGui::SameLine(0, 0);			
-			BlinkingText(adresbyte3.c_str());
+			BlinkingText(ElementsCommands[NumberElementCommands][3].c_str());
 			ImGui::SameLine(0, 0);
-			BlinkingText(adresbyte4.c_str());
+			BlinkingText(ElementsCommands[NumberElementCommands][4].c_str());
 			ImGui::SameLine(0, 0);
 			ImGui::TextColored(ImVec4(red1, green1, blue1, 1), "h==>");
 		}
 		else 
 		{
-			ImGui::TextColored(ImVec4(redadres, greenadres, blueadres, 1),adresbyte1.c_str());
+			ImGui::TextColored(ImVec4(redadres, greenadres, blueadres, 1),ElementsCommands[NumberElementCommands][1].c_str());
 			ImGui::SameLine(0, 0);
-			ImGui::TextColored(ImVec4(redadres, greenadres, blueadres, 1),adresbyte2.c_str());
+			ImGui::TextColored(ImVec4(redadres, greenadres, blueadres, 1),ElementsCommands[NumberElementCommands][2].c_str());
 			ImGui::SameLine(0, 0);
-			ImGui::TextColored(ImVec4(redadres, greenadres, blueadres, 1),adresbyte3.c_str());
+			ImGui::TextColored(ImVec4(redadres, greenadres, blueadres, 1),ElementsCommands[NumberElementCommands][3].c_str());
 			ImGui::SameLine(0, 0);
-			ImGui::TextColored(ImVec4(redadres, greenadres, blueadres, 1),adresbyte4.c_str());
+			ImGui::TextColored(ImVec4(redadres, greenadres, blueadres, 1),ElementsCommands[NumberElementCommands][4].c_str());
 			ImGui::SameLine(0, 0);
 			ImGui::TextColored(ImVec4(redadres, greenadres, blueadres, 1),"h==>");
 		}
 	}
 	else
 	{
-		ImGui::TextColored(ImVec4(redadres, greenadres, blueadres, 1), adresbyte1.c_str());
+		ImGui::TextColored(ImVec4(redadres, greenadres, blueadres, 1), ElementsCommands[NumberElementCommands][1].c_str());
 		ImGui::SameLine(0, 0);
-		ImGui::TextColored(ImVec4(redadres, greenadres, blueadres, 1), adresbyte2.c_str());
+		ImGui::TextColored(ImVec4(redadres, greenadres, blueadres, 1), ElementsCommands[NumberElementCommands][2].c_str());
 		ImGui::SameLine(0, 0);
-		ImGui::TextColored(ImVec4(redadres, greenadres, blueadres, 1), adresbyte3.c_str());
+		ImGui::TextColored(ImVec4(redadres, greenadres, blueadres, 1), ElementsCommands[NumberElementCommands][3].c_str());
 		ImGui::SameLine(0, 0);
-		ImGui::TextColored(ImVec4(redadres, greenadres, blueadres, 1), adresbyte4.c_str());
+		ImGui::TextColored(ImVec4(redadres, greenadres, blueadres, 1), ElementsCommands[NumberElementCommands][4].c_str());
 		ImGui::SameLine(0, 0);
 		ImGui::TextColored(ImVec4(redadres, greenadres, blueadres, 1), "h==>");
 	}
-		if (NumberTypePeremennoi % 4 == 1)
+		if (NumberTypePeremennoi == 1)
 		{
 
 			unsigned long long hexadres;
 			std::stringstream ss;
-			ss << std::hex << adres;
+			ss << std::hex << ElementsCommands[NumberElementCommands][0];
 			ss >> hexadres;
 			hexadres += 1;
 			std::stringstream ss2;
 			ss2 << std::hex << hexadres;
+			
+
+
 			if (ss2.str().size() == 9) error = 5;
 			else {
 				resultString = ss2.str();
@@ -963,12 +1381,12 @@ int main(int, char**)
 				ImGui::TextColored(ImVec4(0.5, 0.5, 0.5, 1), resultString.c_str());
 			}
 		}
-		else if (NumberTypePeremennoi % 4 == 0)
+		else if (NumberTypePeremennoi == 0)
 		{
 
 			unsigned long long hexadres;
 			std::stringstream ss;
-			ss << std::hex << adres;
+			ss << std::hex << ElementsCommands[NumberElementCommands][0];
 			ss >> hexadres;
 			hexadres += 1;
 			std::stringstream ss2;
@@ -986,7 +1404,7 @@ int main(int, char**)
 			resultString = "";
 			unsigned long long hexadres1;
 			std::stringstream ss3;
-			ss3 << std::hex << adres;
+			ss3 << std::hex << ElementsCommands[NumberElementCommands][0];
 			ss3 >> hexadres1;
 			hexadres1 += 2;
 			std::stringstream ss4;
@@ -1004,7 +1422,7 @@ int main(int, char**)
 			resultString = "";
 			unsigned long long hexadres2;
 			std::stringstream ss5;
-			ss5 << std::hex << adres;
+			ss5 << std::hex << ElementsCommands[NumberElementCommands][0];
 			ss5 >> hexadres2;
 			hexadres2 += 3;
 			std::stringstream ss6;
@@ -1022,15 +1440,17 @@ int main(int, char**)
 		}
 
 	ImGui::EndChild();
-	ImGui::SameLine(525, 0);
-	ImGui::BeginChild("Оперативка", ImVec2(110, 300), true, ImGuiWindowFlags_NoMove);
+
+
+	ImGui::SameLine(530, 0);
+	ImGui::BeginChild("Оперативка", ImVec2(110, 360), true, ImGuiWindowFlags_NoMove);
 	ImGui::TextColored(ImVec4(red1, green1, blue1, 1),(const char*)u8"Оперативная");
 	ImGui::TextColored(ImVec4(red1, green1, blue1, 1),(const char*)u8"Память");
 	ImGui::TextColored(ImVec4(red1, green1, blue1, 1)," ");
 	ImGui::TextColored(ImVec4(red1, green1, blue1, 1)," ");
 	ImGui::TextColored(ImVec4(red1, green1, blue1, 1)," ");
 	ImGui::BeginChild("Значение1", ImVec2(87, 40), true);
-	if (chet >= 4.5f and chet <= 9.0f and NumberCommand==1)
+	if (chet >= 4.5f and chet <= 9.0f and NumberCommand > 0 and NumberCommand < 8)
 	{
 		ImGui::TextColored(ImVec4(red1, green1, blue1, 1),"  ");
 		ImGui::SameLine(0, 0);
@@ -1043,10 +1463,12 @@ int main(int, char**)
 		ImGui::TextColored(ImVec4(red1, green1, blue1, 1),znachbyte1.c_str());
 	}
 	ImGui::EndChild();
-		if (NumberTypePeremennoi % 4 == 0)
+		if (((NumberTypePeremennoi == 0 and NumberElements < 2) or 
+			(((NumberElements - 2) % 4) == 0) and
+			NumberCommand < 2) or NumberCommand == 4 or NumberCommand == 7)
 		{
 			ImGui::BeginChild("Значение2", ImVec2(87, 40), true);
-			if (chet >= 9.0f and chet <= 13.5f and NumberCommand == 1)
+			if (chet >= 9.0f and chet <= 13.5f and NumberCommand > 0 and NumberCommand < 8)
 			{
 				ImGui::TextColored(ImVec4(red1, green1, blue1, 1),"  ");
 				ImGui::SameLine(0, 0);
@@ -1061,7 +1483,7 @@ int main(int, char**)
 			ImGui::EndChild();
 			
 			ImGui::BeginChild("Значение3", ImVec2(87, 40), true);
-			if (chet >= 13.5 and chet <= 18 and NumberCommand == 1)
+			if (chet >= 13.5 and chet <= 18 and NumberCommand > 0 and NumberCommand < 8)
 			{
 				ImGui::TextColored(ImVec4(red1, green1, blue1, 1),"  ");
 				ImGui::SameLine(0, 0);
@@ -1075,7 +1497,7 @@ int main(int, char**)
 			}
 			ImGui::EndChild();
 			ImGui::BeginChild("Значение4", ImVec2(87, 40), true);
-			if (chet >= 18 and chet <= 22.5)
+			if (chet >= 18 and chet <= 22.5 and NumberCommand > 0 and NumberCommand < 8)
 			{
 				ImGui::TextColored(ImVec4(red1, green1, blue1, 1),"  ");
 				ImGui::SameLine(0, 0);
@@ -1089,10 +1511,12 @@ int main(int, char**)
 			}
 			ImGui::EndChild();
 		}
-		else if (NumberTypePeremennoi % 4 == 1)
+		else if (((NumberTypePeremennoi == 1 and NumberElements < 2) or
+			((((NumberElements - 2) % 4) == 1)) and
+			NumberCommand < 2) or NumberCommand == 3 or NumberCommand == 6)
 		{
 			ImGui::BeginChild("Значение2", ImVec2(87, 40), true);
-			if (chet >= 9.0f and chet <= 13.5f and NumberCommand == 1)
+			if (chet >= 9.0f and chet <= 13.5f and NumberCommand > 0 and NumberCommand < 8)
 			{
 				ImGui::TextColored(ImVec4(red1, green1, blue1, 1),"  ");
 				ImGui::SameLine(0, 0);
@@ -1108,18 +1532,19 @@ int main(int, char**)
 			ImGui::EndChild();
 
 		}
-	
 	ImGui::EndChild();
-	ImGui::SameLine(635, 0);
-	ImGui::BeginChild("Регистры", ImVec2(140, 300), true, ImGuiWindowFlags_NoMove);
+
+
+	ImGui::SameLine(640, 0);
+	ImGui::BeginChild("Регистры", ImVec2(140, 360),true, ImGuiWindowFlags_NoMove);
 	ImGui::TextColored(ImVec4(red1, green1, blue1, 1), (const char*)u8"  Регистры");
-	ImGui::TextColored(ImVec4(red1, green1, blue1, 1), " ");
-	ImGui::TextColored(ImVec4(red1, green1, blue1, 1), " ");
-	ImGui::TextColored(ImVec4(red1, green1, blue1, 1), " ");
+	UnderlineText("AX", 70, 20, 1);
+	ImGui::TextColored(ImVec4(red1, green1, blue1, 1), "         AX");
 	ImGui::TextColored(ImVec4(red1, green1, blue1, 1), "EAX=");
 	ImGui::SameLine(0,0);
 	for (int i = 0; i < 4; i++) {
-		if (NumberCommand==0 and chet >= 4.5 and chet <= 9 and NumberRegistr % 4 == 0 and NumberElements >= 18  and (NumberElements-2)/4==4)
+		if (i > 1) UnderlineText(byteregistrs[0][i].c_str(), -1, -2, 1);
+		if (NumberCommand==0 and chet >= 4.5 and chet <= 9 and bitysInRegistr == 4 and NumberElements >= 26  and (NumberElements-2)/4 == 5)
 		{
 			BlinkingText(byteregistrs[0][i].c_str());
 			if (i != 3) ImGui::SameLine(0, 0);
@@ -1130,11 +1555,18 @@ int main(int, char**)
 			if (i != 3) ImGui::SameLine(0, 0);
 		}
 	}
-	ImGui::TextColored(ImVec4(red1, green1, blue1, 1), " ");
+	ImGui::TextColored(ImVec4(red1, green1, blue1, 1), "        AH");
+	ImGui::SameLine(0 , 1);
+	ImGui::TextColored(ImVec4(red1, green1, blue1, 1), "AL");
+
+
+	UnderlineText("AX", 70, 20, 1);
+	ImGui::TextColored(ImVec4(red1, green1, blue1, 1), "         BX");
 	ImGui::TextColored(ImVec4(red1, green1, blue1, 1), "EBX=");
 	ImGui::SameLine(0, 0);
 	for (int i = 0; i < 4; i++) {
-		if (NumberCommand == 0 and chet >= 4.5 and chet <= 9 and NumberRegistr % 4 == 0 and NumberElements >= 18 and (NumberElements - 2) / 4 == 5)
+		if (i > 1) UnderlineText(byteregistrs[0][i].c_str(), -1, -2, 1);
+		if (NumberCommand == 0 and chet >= 4.5 and chet <= 9 and bitysInRegistr == 4 and NumberElements >= 26 and (NumberElements - 2) / 4 == 6)
 		{
 			BlinkingText(byteregistrs[1][i].c_str());
 			if (i != 3) ImGui::SameLine(0, 0);
@@ -1145,11 +1577,18 @@ int main(int, char**)
 			if (i != 3) ImGui::SameLine(0, 0);
 		}
 	}
-	ImGui::TextColored(ImVec4(red1, green1, blue1, 1), " ");
+	ImGui::TextColored(ImVec4(red1, green1, blue1, 1), "        BH");
+	ImGui::SameLine(0, 1);
+	ImGui::TextColored(ImVec4(red1, green1, blue1, 1), "BL");
+
+
+	UnderlineText("AX", 70, 20, 1);
+	ImGui::TextColored(ImVec4(red1, green1, blue1, 1), "         CX");
 	ImGui::TextColored(ImVec4(red1, green1, blue1, 1), "ECX=");
 	ImGui::SameLine(0, 0);
 	for (int i = 0; i < 4; i++) {
-		if (NumberCommand == 0 and chet >= 4.5 and chet <= 9 and NumberRegistr % 4 == 0 and NumberElements >= 18 and (NumberElements - 2) / 4 == 6)
+		if (i > 1) UnderlineText(byteregistrs[0][i].c_str(), -1, -2, 1);
+		if (NumberCommand == 0 and chet >= 4.5 and chet <= 9 and bitysInRegistr == 4 and NumberElements >= 26 and (NumberElements - 2) / 4 == 7)
 		{
 			BlinkingText(byteregistrs[2][i].c_str());
 			if (i != 3) ImGui::SameLine(0, 0);
@@ -1160,11 +1599,18 @@ int main(int, char**)
 			if (i != 3) ImGui::SameLine(0, 0);
 		}
 	}
-	ImGui::TextColored(ImVec4(red1, green1, blue1, 1), " ");
+	ImGui::TextColored(ImVec4(red1, green1, blue1, 1), "        CH");
+	ImGui::SameLine(0, 1);
+	ImGui::TextColored(ImVec4(red1, green1, blue1, 1), "CL");
+
+
+	UnderlineText("AX", 70, 20, 1);
+	ImGui::TextColored(ImVec4(red1, green1, blue1, 1), "         DX");
 	ImGui::TextColored(ImVec4(red1, green1, blue1, 1), "EDX=");
 	ImGui::SameLine(0, 0);
 	for (int i = 0; i < 4; i++) {
-		if (NumberCommand == 0 and chet >= 4.5 and chet <= 9 and NumberRegistr % 4 == 0 and NumberElements >= 18 and (NumberElements - 2) / 4 == 7)
+		if (i > 1) UnderlineText(byteregistrs[0][i].c_str(), -1, -2, 1);
+		if (NumberCommand == 0 and chet >= 4.5 and chet <= 9 and bitysInRegistr == 4 and NumberElements >= 26 and (NumberElements - 2) / 4 == 8)
 		{
 			BlinkingText(byteregistrs[3][i].c_str());
 			if (i != 3) ImGui::SameLine(0, 0);
@@ -1175,8 +1621,72 @@ int main(int, char**)
 			if (i != 3) ImGui::SameLine(0, 0);
 		}
 	}
+	ImGui::TextColored(ImVec4(red1, green1, blue1, 1), "        DH");
+	ImGui::SameLine(0, 1);
+	ImGui::TextColored(ImVec4(red1, green1, blue1, 1), "DL");
+
+
+	UnderlineText("AX", 70, 20, 1);
+	ImGui::TextColored(ImVec4(red1, green1, blue1, 1), "         SI");
+	ImGui::TextColored(ImVec4(red1, green1, blue1, 1), "ESI=");
+	ImGui::SameLine(0, 0);
+	for (int i = 0; i < 4; i++) {
+		if (NumberCommand == 0 and chet >= 4.5 and chet <= 9 and bitysInRegistr == 4 and NumberElements == 38)
+		{
+			BlinkingText(byteregistrs[4][i].c_str());
+			if (i != 3) ImGui::SameLine(0, 0);
+		}
+		else
+		{
+			ImGui::TextColored(ImVec4(red1, green1, blue1, 1), byteregistrs[4][i].c_str());
+			if (i != 3) ImGui::SameLine(0, 0);
+		}
+	}
+	UnderlineText("AX", 70, 20, 1);
+	ImGui::TextColored(ImVec4(red1, green1, blue1, 1), "         DI");
+	ImGui::TextColored(ImVec4(red1, green1, blue1, 1), "EDI=");
+	ImGui::SameLine(0, 0);
+	for (int i = 0; i < 4; i++) {
+		if (NumberCommand == 0 and chet >= 4.5 and chet <= 9 and bitysInRegistr == 4 and NumberElements == 40)
+		{
+			BlinkingText(byteregistrs[5][i].c_str());
+			if (i != 3) ImGui::SameLine(0, 0);
+		}
+		else
+		{
+			ImGui::TextColored(ImVec4(red1, green1, blue1, 1), byteregistrs[5][i].c_str());
+			if (i != 3) ImGui::SameLine(0, 0);
+		}
+	}
 	ImGui::EndChild();
-	ImGui::BeginChild("Откладка", ImVec2(625, 150), true);
+
+	ImGui::BeginChild("Откладка", ImVec2(633, 150), true);
+
+	if (NumberCommand == 4)
+	{
+		ImGui::TextColored(ImVec4(red1, green1, blue1, 1), "[ESI] ==> EAX");
+	}
+	else if (NumberCommand == 3)
+	{
+		ImGui::TextColored(ImVec4(red1, green1, blue1, 1), "[ESI] ==> AX");
+	}
+	else if (NumberCommand == 2)
+	{
+		ImGui::TextColored(ImVec4(red1, green1, blue1, 1), "[ESI] ==> AL");
+	}
+	else if (NumberCommand == 7)
+	{
+		ImGui::TextColored(ImVec4(red1, green1, blue1, 1), "EAX ==> [EDI]");
+	}
+	else if (NumberCommand == 6)
+	{
+		ImGui::TextColored(ImVec4(red1, green1, blue1, 1), "AX ==> [EDI]");
+	}
+	else if (NumberCommand == 5)
+	{
+		ImGui::TextColored(ImVec4(red1, green1, blue1, 1), "AL ==> [EDI]");
+	}
+
 	if (error == 0)
 	{
 		greenznach = green1;
@@ -1206,14 +1716,14 @@ int main(int, char**)
 	}
 	else if (error == 4)
 	{
-		ImGui::TextColored(ImVec4(1.0, 0.0, 0.0, 1.0), (const char*)u8"Ошибка: Переменная x1 или другой регистр больше основного регистра");
+		ImGui::TextColored(ImVec4(1.0, 0.0, 0.0, 1.0), (const char*)u8"Ошибка: Переменная x1 или другой регистр больше основного регистра ");
 		ImGui::TextColored(ImVec4(0, 1.0, 0.0, 1.0), (const char*)u8"Нужно увеличить регистр или уменьшить переменную");
 
 	}
 	else if (error == 5)
 	{
-		ImGui::TextColored(ImVec4(1.0, 0.0, 0.0, 1.0), (const char*)u8"Ошибка: Выход за диапазон адресов");
-		ImGui::TextColored(ImVec4(0.0, 1.0, 0.0, 1.0), (const char*)u8"Нужно уменьшить адрес");
+		ImGui::TextColored(ImVec4(1.0, 0.0, 0.0, 1.0), (const char*)u8"Ошибка: Выход за диапазон адресов ");
+		ImGui::TextColored(ImVec4(0.0, 1.0, 0.0, 1.0), (const char*)u8"Нужно уменьшить адрес ");
 		greenadres = 0;
 		blueadres = 0;
 		redadres = 1;
@@ -1236,9 +1746,37 @@ int main(int, char**)
 	else if (error == 9)
 	{
 		ImGui::TextColored(ImVec4(1.0, 0.0, 0.0, 1.0), (const  char*)u8"Ошибка: Выход за пределы значения переменной");
-		ImGui::TextColored(ImVec4(0.0, 1.0, 0.0, 1.0), (const char*)u8"Нужно увеличить адрес или уменьшить значение указатель");
+		ImGui::TextColored(ImVec4(0.0, 1.0, 0.0, 1.0), (const char*)u8"Нужно увеличить адрес или уменьшить значение указателя");
 	}
 	ImGui::EndChild();
+	ImGui::SameLine(0,0);
+
+
+	ImGui::BeginChild("Флаги", ImVec2(140, 150), true);
+	ImGui::TextColored(ImVec4(red1, green1, blue1, 1), "DF =");
+	ImGui::SameLine();
+	if (chet >= 4.5 and chet <= 9 and NumberCommand == 8)
+	{
+		if (DF) BlinkingText("1");
+		else 	BlinkingText("0");
+		DF = false;
+	}
+	else if (chet >= 4.5 and chet <= 9 and NumberCommand == 9)
+	{
+		if (DF) BlinkingText("1");
+		else 	BlinkingText("0");
+		DF = true;
+	}
+	else
+	{
+		if (DF) 	ImGui::TextColored(ImVec4(red1, green1, blue1, 1), "1");
+		else 	ImGui::TextColored(ImVec4(red1, green1, blue1, 1), "0");
+	}
+	if (ImGui::Button((const char*)u8"0")) DF = false;
+	ImGui::SameLine();
+	if (ImGui::Button((const char*)u8"1")) DF = true;
+	ImGui::EndChild();
+
 	ImGui::TextColored(ImVec4(red1, green1, blue1, 1),(const char*)u8"Мои ссылки");
 	ImGui::Separator();
 
@@ -1250,10 +1788,8 @@ int main(int, char**)
 		system("xdg-open https://github.com/king174rus");
 	}
 	ImGui::PopStyleColor(5); 
-
-	
     ImGui::End();
-        }
+    }
 
 
         // Rendering
