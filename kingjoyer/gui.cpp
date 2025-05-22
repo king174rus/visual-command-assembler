@@ -327,6 +327,7 @@ const char* FakeElements[] = { "x1", "[x1]", "EAX", "AX", "AH", "AL","EBX", "BX"
 static int FakeNumberElements = 0;
 static int NumberElements = 0;
 string ElementsCommands[2][5] = { {"0005A420", "00", "05", "A4", "20"}, {"00401000", "00", "40", "10","00"} };
+string predZnach[4] = { "00", "40", "10","00" };
 static int NumberElementCommands = 0;
 
 const char* Commads[] = {"LEA", "MOV", "LODSB", "LODSW", "LODSD", "STOSB", "STOSW", "STOSD", "CLD", "STD"};
@@ -337,6 +338,7 @@ int otchet = 0;
 int bitysInRegistr = 4;
 int Registr = 0;
 long long AdresHex = 0;
+
 
 void BlinkingText(const char* text)
 {
@@ -876,7 +878,10 @@ void gui::Render() noexcept
 				NumberTypePeremennoi = 0;
 				znachbyte4 = byteregistrs[Registr][0];
 				peremennai = znachbyte4 + znachbyte3 + znachbyte2 + znachbyte1;
-
+				predZnach[0] = byteregistrs[5][0];
+				predZnach[1] = byteregistrs[5][1];
+				predZnach[2] = byteregistrs[5][2];
+				predZnach[3] = byteregistrs[5][3];
 				if (!DF) AdresHex = convertStringtoHex((byteregistrs[5][0] + byteregistrs[5][1] + byteregistrs[5][2] + byteregistrs[5][3])) + 4;
 				else AdresHex = convertStringtoHex((byteregistrs[5][0] + byteregistrs[5][1] + byteregistrs[5][2] + byteregistrs[5][3])) - 4;
 				resultString = convertHextoString(AdresHex);
@@ -920,7 +925,10 @@ void gui::Render() noexcept
 				znachbyte2 = byteregistrs[Registr][2];
 				znachbyte3, znachbyte4 = "";
 				peremennai = znachbyte2 + znachbyte1;
-
+				predZnach[0] = byteregistrs[5][0];
+				predZnach[1] = byteregistrs[5][1];
+				predZnach[2] = byteregistrs[5][2];
+				predZnach[3] = byteregistrs[5][3];
 				if (!DF) AdresHex = convertStringtoHex((byteregistrs[5][0] + byteregistrs[5][1] + byteregistrs[5][2] + byteregistrs[5][3])) + 2;
 				else AdresHex = convertStringtoHex((byteregistrs[5][0] + byteregistrs[5][1] + byteregistrs[5][2] + byteregistrs[5][3])) - 2;
 				resultString = convertHextoString(AdresHex);
@@ -958,7 +966,10 @@ void gui::Render() noexcept
 				znachbyte2, znachbyte3, znachbyte4 = "";
 				znachbyte1 = byteregistrs[Registr][3];
 				peremennai = znachbyte1;
-				
+				predZnach[0] = byteregistrs[5][0];
+				predZnach[1] = byteregistrs[5][1];
+				predZnach[2] = byteregistrs[5][2];
+				predZnach[3] = byteregistrs[5][3];
 				if (!DF) AdresHex = convertStringtoHex((byteregistrs[5][0] + byteregistrs[5][1] + byteregistrs[5][2] + byteregistrs[5][3])) + 1;
 				else AdresHex = convertStringtoHex((byteregistrs[5][0] + byteregistrs[5][1] + byteregistrs[5][2] + byteregistrs[5][3])) - 1;
 				resultString = convertHextoString(AdresHex);
@@ -992,7 +1003,7 @@ void gui::Render() noexcept
 	else NumberElementCommands = 1;
 	ImGui::PushStyleColor(ImGuiCol_Button, ImVec4(0, 0.5, 0, 1));
 	ImGui::PushStyleColor(ImGuiCol_Text, ImVec4(1, 1, 1, 1.0f));
-	if (ImGui::Button((const char*)u8"Выполнить команду"))
+	if (ImGui::Button((const char*)u8"Выполнить команду") and !isBlinking)
 	{
 		if ((NumberElements - 2) % 4 != 0 and NumberElements >= 26 and NumberElements != 40) error = 8;
 		else
@@ -1043,7 +1054,7 @@ void gui::Render() noexcept
 		{
 			BlinkingText("LEA");
 			ImGui::SameLine();
-			BlinkingText((const char*)registr.c_str());
+			BlinkingText((registr + ",").c_str());
 			ImGui::SameLine();
 			ImGui::SetNextItemWidth(ImGui::GetWindowWidth() * 0.15f);
 			if (!isBlinking) ImGui::Combo((const char*)u8" ", &FakeNumberElements, FakeElements, IM_ARRAYSIZE(FakeElements));
@@ -1072,7 +1083,7 @@ void gui::Render() noexcept
 		{
 			BlinkingText("MOV");
 			ImGui::SameLine();
-			BlinkingText((const char*)registr.c_str());
+			BlinkingText((registr + ",").c_str());
 			ImGui::SameLine();
 			ImGui::SetNextItemWidth(ImGui::GetWindowWidth() * 0.15f);
 			if (!isBlinking) ImGui::Combo((const char*)u8" ", &FakeNumberElements, FakeElements, IM_ARRAYSIZE(FakeElements));
@@ -1083,7 +1094,7 @@ void gui::Render() noexcept
 		{
 			ImGui::TextColored(ImVec4(red1, green1, blue1, 1),"MOV");
 			ImGui::SameLine();
-			ImGui::TextColored(ImVec4(red1, green1, blue1, 1),(const char*)registr.c_str());
+			ImGui::TextColored(ImVec4(red1, green1, blue1, 1), (const char*)registr.c_str());
 			ImGui::SameLine();
 			ImGui::SetNextItemWidth(ImGui::GetWindowWidth() * 0.15f);
 			if (!isBlinking) ImGui::Combo((const char*)u8" ", &FakeNumberElements, FakeElements, IM_ARRAYSIZE(FakeElements));
@@ -1152,7 +1163,8 @@ void gui::Render() noexcept
 				int KosAddress = (NumberElements - 26) / 4;
 				if (NumberCommand == 7) KosAddress = 5;
 				else if (NumberCommand == 4) KosAddress = 4;
-				if (ElementsCommands[NumberElementCommands][1] == byteregistrs[KosAddress][0] and ElementsCommands[NumberElementCommands][2] == byteregistrs[KosAddress][1] and ElementsCommands[NumberElementCommands][3] == byteregistrs[KosAddress][2] and ElementsCommands[NumberElementCommands][4] == byteregistrs[KosAddress][3])
+				if ((NumberCommand != 7 and ElementsCommands[NumberElementCommands][1] == byteregistrs[KosAddress][0] and ElementsCommands[NumberElementCommands][2] == byteregistrs[KosAddress][1] and ElementsCommands[NumberElementCommands][3] == byteregistrs[KosAddress][2] and ElementsCommands[NumberElementCommands][4] == byteregistrs[KosAddress][3])
+					or (NumberCommand == 7 and ElementsCommands[NumberElementCommands][1] == predZnach[0] and ElementsCommands[NumberElementCommands][2] == predZnach[1] and ElementsCommands[NumberElementCommands][3] == predZnach[2] and ElementsCommands[NumberElementCommands][4] == predZnach[3]))
 				{
 					otchet = 0;
 					if (size(peremennai) == 8)
@@ -1180,6 +1192,7 @@ void gui::Render() noexcept
 				else
 				{
 					glavregistr = byteregistrs[KosAddress][0] + byteregistrs[KosAddress][1] + byteregistrs[KosAddress][2] + byteregistrs[KosAddress][3];
+					if (NumberCommand == 7) glavregistr = predZnach[0] + predZnach[1] + predZnach[2] + predZnach[3];
 					int otchet1;
 					otchet1 = convertStringtoHex(ElementsCommands[NumberElementCommands][0]) - convertStringtoHex(glavregistr);
 					if (otchet1 == 1)
@@ -1221,7 +1234,8 @@ void gui::Render() noexcept
 				int KosAddress = (NumberElements - 26) / 4;
 				if (NumberCommand == 5) KosAddress = 5;
 				else if (NumberCommand == 2) KosAddress = 4;
-					if (ElementsCommands[NumberElementCommands][1] == byteregistrs[KosAddress][0] and ElementsCommands[NumberElementCommands][2] == byteregistrs[KosAddress][1] and ElementsCommands[NumberElementCommands][3] == byteregistrs[KosAddress][2] and ElementsCommands[NumberElementCommands][4] == byteregistrs[KosAddress][3])
+					if ((NumberCommand != 5 and ElementsCommands[NumberElementCommands][1] == byteregistrs[KosAddress][0] and ElementsCommands[NumberElementCommands][2] == byteregistrs[KosAddress][1] and ElementsCommands[NumberElementCommands][3] == byteregistrs[KosAddress][2] and ElementsCommands[NumberElementCommands][4] == byteregistrs[KosAddress][3])
+						or (NumberCommand == 5 and ElementsCommands[NumberElementCommands][1] == predZnach[0] and ElementsCommands[NumberElementCommands][2] == predZnach[1] and ElementsCommands[NumberElementCommands][3] == predZnach[2] and ElementsCommands[NumberElementCommands][4] == predZnach[3]))
 					{
 						otchet = 3;
 						znachbyte4 = "";
@@ -1243,7 +1257,8 @@ void gui::Render() noexcept
 				int KosAddress = (NumberElements - 26) / 4;
 				if (NumberCommand == 6) KosAddress = 5;
 				else if (NumberCommand == 3) KosAddress = 4;
-				if (ElementsCommands[NumberElementCommands][1] == byteregistrs[KosAddress][0] and ElementsCommands[NumberElementCommands][2] == byteregistrs[KosAddress][1] and ElementsCommands[NumberElementCommands][3] == byteregistrs[KosAddress][2] and ElementsCommands[NumberElementCommands][4] == byteregistrs[KosAddress][3])
+				if ((NumberCommand != 6 and ElementsCommands[NumberElementCommands][1] == byteregistrs[KosAddress][0] and ElementsCommands[NumberElementCommands][2] == byteregistrs[KosAddress][1] and ElementsCommands[NumberElementCommands][3] == byteregistrs[KosAddress][2] and ElementsCommands[NumberElementCommands][4] == byteregistrs[KosAddress][3])
+					or (NumberCommand == 6 and ElementsCommands[NumberElementCommands][1] == predZnach[0] and ElementsCommands[NumberElementCommands][2] == predZnach[1] and ElementsCommands[NumberElementCommands][3] == predZnach[2] and ElementsCommands[NumberElementCommands][4] == predZnach[3]))
 				{
 					otchet = 2;
 					znachbyte4 = "";
@@ -1254,6 +1269,7 @@ void gui::Render() noexcept
 				else
 				{
 					glavregistr = byteregistrs[KosAddress][0] + byteregistrs[KosAddress][1] + byteregistrs[KosAddress][2] + byteregistrs[KosAddress][3];
+					if (NumberCommand == 6) glavregistr = predZnach[0] + predZnach[1] + predZnach[2] + predZnach[3];
 					int otchet1;
 					otchet1 = convertStringtoHex(ElementsCommands[NumberElementCommands][0]) - convertStringtoHex(glavregistr);
 
@@ -1770,7 +1786,7 @@ void gui::Render() noexcept
 	{
 		ImGui::TextColored(ImVec4(red1, green1, blue1, 1), "[ESI] ==> AL");
 	}
-	if (NumberCommand == 5)
+	else if (NumberCommand == 7)
 	{
 		ImGui::TextColored(ImVec4(red1, green1, blue1, 1), "EAX ==> [EDI]");
 	}
@@ -1778,7 +1794,7 @@ void gui::Render() noexcept
 	{
 		ImGui::TextColored(ImVec4(red1, green1, blue1, 1), "AX ==> [EDI]");
 	}
-	else if (NumberCommand == 7)
+	else if (NumberCommand == 5)
 	{
 		ImGui::TextColored(ImVec4(red1, green1, blue1, 1), "AL ==> [EDI]");
 	}
